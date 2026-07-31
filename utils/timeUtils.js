@@ -473,34 +473,35 @@ export function getRelativeTimeMeta(days, options = {}) {
 /** 格式化相对时间描述 */
 export function formatRelativeTime(days, options = {}) {
     const meta = getRelativeTimeMeta(days, options);
+    const L = (zhCN, zhTW) => options.lang === 'zh-TW' ? zhTW : zhCN;
     switch (meta.key) {
         case 'unknown': return '未知';
-        case 'special_earlier': return '较早';
-        case 'special_after': return '之后';
+        case 'special_earlier': return L('较早', '較早');
+        case 'special_after': return L('之后', '之後');
         case 'special_before': return '之前';
         case 'today': return '今天';
         case 'yesterday': return '昨天';
         case 'day_before_yesterday': return '前天';
         case 'three_days_ago': return '大前天';
         case 'tomorrow': return '明天';
-        case 'day_after_tomorrow': return '后天';
-        case 'in_three_days': return '大后天';
-        case 'last_weekday': return `上周${WEEKDAY_NAMES[meta.weekday]}`;
-        case 'week_before_last_weekday': return `上上周${WEEKDAY_NAMES[meta.weekday]}`;
-        case 'next_weekday': return `下周${WEEKDAY_NAMES[meta.weekday]}`;
-        case 'week_after_next_weekday': return `下下周${WEEKDAY_NAMES[meta.weekday]}`;
-        case 'last_month_day': return `上个月${meta.day}号`;
-        case 'next_month_day': return `下个月${meta.day}号`;
+        case 'day_after_tomorrow': return L('后天', '後天');
+        case 'in_three_days': return L('大后天', '大後天');
+        case 'last_weekday': return L(`上周${WEEKDAY_NAMES[meta.weekday]}`, `上週${WEEKDAY_NAMES[meta.weekday]}`);
+        case 'week_before_last_weekday': return L(`上上周${WEEKDAY_NAMES[meta.weekday]}`, `上上週${WEEKDAY_NAMES[meta.weekday]}`);
+        case 'next_weekday': return L(`下周${WEEKDAY_NAMES[meta.weekday]}`, `下週${WEEKDAY_NAMES[meta.weekday]}`);
+        case 'week_after_next_weekday': return L(`下下周${WEEKDAY_NAMES[meta.weekday]}`, `下下週${WEEKDAY_NAMES[meta.weekday]}`);
+        case 'last_month_day': return L(`上个月${meta.day}号`, `上個月${meta.day}號`);
+        case 'next_month_day': return L(`下个月${meta.day}号`, `下個月${meta.day}號`);
         case 'last_year_date': return `去年${meta.month}月${meta.day}日`;
         case 'year_before_last_date': return `前年${meta.month}月${meta.day}日`;
         case 'days_ago': return `${meta.value}天前`;
-        case 'days_later': return `${meta.value}天后`;
-        case 'months_ago': return `${meta.value}个月前`;
-        case 'months_later': return `${meta.value}个月后`;
-        case 'years_months_ago': return `${meta.years}年${meta.months}个月前`;
-        case 'years_months_later': return `${meta.years}年${meta.months}个月后`;
+        case 'days_later': return L(`${meta.value}天后`, `${meta.value}天後`);
+        case 'months_ago': return L(`${meta.value}个月前`, `${meta.value}個月前`);
+        case 'months_later': return L(`${meta.value}个月后`, `${meta.value}個月後`);
+        case 'years_months_ago': return L(`${meta.years}年${meta.months}个月前`, `${meta.years}年${meta.months}個月前`);
+        case 'years_months_later': return L(`${meta.years}年${meta.months}个月后`, `${meta.years}年${meta.months}個月後`);
         case 'years_ago': return `${meta.years}年前`;
-        case 'years_later': return `${meta.years}年后`;
+        case 'years_later': return L(`${meta.years}年后`, `${meta.years}年後`);
         default: return '未知';
     }
 }
@@ -568,7 +569,7 @@ export function getCurrentSystemTime() {
 }
 
 /** 生成时间参考信息 */
-export function generateTimeReference(currentDate) {
+export function generateTimeReference(currentDate, options = {}) {
     const current = parseStoryDate(currentDate);
     if (!current) return null;
     
@@ -577,8 +578,12 @@ export function generateTimeReference(currentDate) {
             current: currentDate,
             type: current.type,
             note: current.type === 'custom'
-                ? '自定义日历模式，相对日期由插件自动计算'
-                : '奇幻日历模式，相对日期由插件自动计算'
+                ? (options.lang === 'zh-TW'
+                    ? '自訂日曆模式，相對日期由擴充功能自動計算'
+                    : '自定义日历模式，相对日期由插件自动计算')
+                : (options.lang === 'zh-TW'
+                    ? '奇幻日曆模式，相對日期由擴充功能自動計算'
+                    : '奇幻日历模式，相对日期由插件自动计算')
         };
     }
     
@@ -604,7 +609,7 @@ export function generateTimeReference(currentDate) {
 }
 
 /** 计算两个日期之间的详细差异 */
-export function calculateDetailedRelativeTime(fromDateStr, toDateStr) {
+export function calculateDetailedRelativeTime(fromDateStr, toDateStr, options = {}) {
     const days = calculateRelativeTime(fromDateStr, toDateStr);
     if (days === null) return { days: null, relative: '未知' };
     
@@ -624,7 +629,7 @@ export function calculateDetailedRelativeTime(fromDateStr, toDateStr) {
         toDate.setFullYear(toYear, to.month - 1, to.day);
     }
     
-    const relative = formatRelativeTime(days, { fromDate, toDate });
+    const relative = formatRelativeTime(days, { ...options, fromDate, toDate });
     
     return { days, fromDate, toDate, relative };
 }

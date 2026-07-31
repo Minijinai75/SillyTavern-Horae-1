@@ -1,6 +1,6 @@
 # Horae local verification assets
 
-Status: prepared for later verification. None of the commands below were run while these assets were created.
+Status: verified on 26-07-31 (Asia/Taipei). The unit suite and SillyTavern 1.18.0 isolated runtime matrix below have been run successfully.
 
 Requirements: Node.js 20+ and, for the examples, PowerShell 7. The assets have no package dependencies and do not require a root `package.json`.
 
@@ -76,7 +76,7 @@ Point Horae at `http://127.0.0.1:43119/v1`. In a browser-hosted SillyTavern sess
 
 ## SillyTavern 1.18 final matrix
 
-These fixtures support the later manual matrix without a paid model:
+These fixtures were used to run the isolated matrix without a paid model:
 
 | Case | Setup and evidence |
 |---|---|

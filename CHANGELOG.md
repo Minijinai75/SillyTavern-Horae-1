@@ -4,10 +4,10 @@
 
 ---
 
-## v1.15.1-minijin.1 — Candidate Code Freeze
+## v1.15.1-minijin.1 — Released
 
-> 狀態：候選程式碼已凍結，尚未執行最終驗證。實機驗證日期：**待最終驗證補登**。
-> 下一步：一次執行完整驗證、SillyTavern 1.18.0 實機矩陣與 Grok 獨立審計。
+> 狀態：已完成自動驗證與 SillyTavern 1.18.0 隔離實機矩陣，並發布至 Minijin fork。
+> 驗證日期：**26-07-31（Asia/Taipei）**；首版功能 commit：`044b355`。
 
 ### Minijin Fork：回覆後輔助 API 結算
 
@@ -20,6 +20,13 @@
 - 補齊聊天切換回放、pristine greeting sidecar、overswipe、swipe 刪除、純標籤編輯與 system/tool 排除。
 - 歷史重抽以目標樓前的來源重建場景、關係、待辦與 RPG，不讀取 root 中的未來聚合。
 - 修正 SillyTavern 1.18.0 CORS 代理路徑、角色卡 CSRF 與 Port API 憑證遮罩；詳細維護邊界見 [FORK_NOTES.md](FORK_NOTES.md)。
+
+### 驗證結果
+
+- JavaScript 語法、8 份 JSON、Horae 擴充 Kit 8/8 與 `git diff --check` 全部通過。
+- `postResponseExtraction` 單元測試 7/7 通過。
+- SillyTavern 1.18.0 實測涵蓋：預設關閉、主提示詞隔離、非同步結算、跨回合記憶、2 秒等待上限、401／500／格式損壞／缺標籤、CORS 代理、串流、持久化、編輯／swipe／切聊天競態。
+- 失敗路徑均保留正文，且未發生輔助 API 失敗後回退主 API。
 
 ---
 

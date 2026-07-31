@@ -7,7 +7,7 @@
 
 import { calculateDetailedRelativeTime, getRelativeTimeMeta } from '../utils/timeUtils.js';
 import { t2s } from '../utils/zhConvert.js';
-import { tNodeForLang, detectEffectiveAiLang } from './i18n.js';
+import { tNodeForLang, detectEffectiveAiLang, getLanguage } from './i18n.js';
 import { getPromptDefaultSync } from './promptDefaults.js';
 
 const DB_NAME = 'HoraeVectors';
@@ -17,6 +17,8 @@ const SNAPSHOT_STORE = 'memorySnapshots';
 const RECALL_CACHE_LIMIT = 16;
 const SNAPSHOT_FORMAT = 'horae-memory-snapshot';
 const SNAPSHOT_VERSION = '1.0';
+
+const uiZh = (zhCN, zhTW) => getLanguage() === 'zh-TW' ? zhTW : zhCN;
 
 const MODEL_CONFIG = {
     'Xenova/bge-small-zh-v1.5': { dimensions: 512, prefix: null },
@@ -109,7 +111,10 @@ export class VectorManager {
             this.worker = new Worker(workerUrl, { type: 'module' });
 
             await new Promise((resolve, reject) => {
-                const timeout = setTimeout(() => reject(new Error('模型加载超时（5分钟）')), 300000);
+                const timeout = setTimeout(() => reject(new Error(uiZh(
+                    '模型加载超时（5分钟）',
+                    '模型載入逾時（5 分鐘）',
+                ))), 300000);
 
                 this.worker.onmessage = (e) => {
                     const { type, data, dimensions: dims } = e.data;
@@ -134,7 +139,7 @@ export class VectorManager {
 
                 this.worker.onerror = (err) => {
                     clearTimeout(timeout);
-                    reject(new Error(err.message || 'Worker 加载失败'));
+                    reject(new Error(err.message || uiZh('Worker 加载失败', '背景執行緒載入失敗')));
                 };
 
                 this.worker.postMessage({ type: 'init', data: { model, dtype: dtype || 'q8' } });
@@ -180,7 +185,10 @@ export class VectorManager {
             // 探测维度：发一条测试文本
             const testResult = await this._embedApi(['test']);
             if (!testResult?.vectors?.[0]) {
-                throw new Error('API 连接失败或返回格式异常，请检查地址、密钥和模型名称是否正确');
+                throw new Error(uiZh(
+                    'API 连接失败或返回格式异常，请检查地址、密钥和模型名称是否正确',
+                    'API 連線失敗或回傳格式異常，請檢查網址、API 金鑰及模型名稱是否正確',
+                ));
             }
             this.dimensions = testResult.vectors[0].length;
             this.isReady = true;
@@ -2259,7 +2267,8 @@ export class VectorManager {
 
     _getRelativeTimeDesc(eventDate, currentDate) {
         if (!eventDate || !currentDate) return '';
-        const result = calculateDetailedRelativeTime(eventDate, currentDate);
+        const lang = this._activeKeywordLang || 'zh-CN';
+        const result = calculateDetailedRelativeTime(eventDate, currentDate, { lang });
         if (result.days === null || result.days === undefined) return '';
 
         const meta = getRelativeTimeMeta(result.days, { fromDate: result.fromDate, toDate: result.toDate });
@@ -2269,13 +2278,13 @@ export class VectorManager {
             case 'yesterday': return '(昨天)';
             case 'day_before_yesterday': return '(前天)';
             case 'three_days_ago': return '(大前天)';
-            case 'last_weekday': return `(上周${WD[meta.weekday]})`;
-            case 'week_before_last_weekday': return `(上上周${WD[meta.weekday]})`;
-            case 'last_month_day': return `(上个月${meta.day}号)`;
+            case 'last_weekday': return lang === 'zh-TW' ? `(上週${WD[meta.weekday]})` : `(上周${WD[meta.weekday]})`;
+            case 'week_before_last_weekday': return lang === 'zh-TW' ? `(上上週${WD[meta.weekday]})` : `(上上周${WD[meta.weekday]})`;
+            case 'last_month_day': return lang === 'zh-TW' ? `(上個月${meta.day}號)` : `(上个月${meta.day}号)`;
             case 'last_year_date': return `(去年${meta.month}月${meta.day}日)`;
             case 'year_before_last_date': return `(前年${meta.month}月${meta.day}日)`;
             case 'days_ago': return `(${meta.value}天前)`;
-            case 'months_ago': return `(${meta.value}个月前)`;
+            case 'months_ago': return lang === 'zh-TW' ? `(${meta.value}個月前)` : `(${meta.value}个月前)`;
             case 'years_ago': return `(${meta.years}年前)`;
         }
         return '';
@@ -2295,7 +2304,7 @@ export class VectorManager {
             setTimeout(() => {
                 if (this._pendingCallbacks.has(id)) {
                     this._pendingCallbacks.delete(id);
-                    reject(new Error('Embedding 超时'));
+                    reject(new Error(uiZh('Embedding 超时', '向量嵌入處理逾時')));
                 }
             }, 30000);
         });
@@ -2332,7 +2341,10 @@ export class VectorManager {
                 }),
                 parseVectors: json => {
                     if (!json.data || !Array.isArray(json.data)) {
-                        const wrapped = new Error('API 返回格式异常：缺少 data 数组');
+                        const wrapped = new Error(uiZh(
+                            'API 返回格式异常：缺少 data 数组',
+                            'API 回傳格式異常：缺少 data 陣列',
+                        ));
                         wrapped.code = 'FORMAT';
                         throw wrapped;
                     }
@@ -2362,7 +2374,10 @@ export class VectorManager {
             }),
             parseVectors: json => {
                 if (!json.embeddings || !Array.isArray(json.embeddings)) {
-                    const wrapped = new Error('Gemini API 返回格式异常：缺少 embeddings 数组');
+                    const wrapped = new Error(uiZh(
+                        'Gemini API 返回格式异常：缺少 embeddings 数组',
+                        'Gemini API 回傳格式異常：缺少 embeddings 陣列',
+                    ));
                     wrapped.code = 'FORMAT';
                     throw wrapped;
                 }
@@ -2382,7 +2397,9 @@ export class VectorManager {
             });
         } catch (err) {
             console.error('[Horae Vector] API embedding 网络异常:', err);
-            const wrapped = new Error(err?.message || 'Network error');
+            const wrapped = new Error(getLanguage() === 'zh-TW'
+                ? `API 連線失敗${err?.message ? `：${err.message}` : ''}`
+                : (err?.message || 'Network error'));
             // TypeError 通常是 CORS、DNS 解析失败、连接被拒绝等浏览器层 fetch 失败
             if (err instanceof TypeError) {
                 wrapped.code = 'NETWORK';
@@ -2410,14 +2427,20 @@ export class VectorManager {
             const json = await resp.json();
             const vectors = req.parseVectors(json);
             if (!Array.isArray(vectors) || vectors.some(v => !Array.isArray(v))) {
-                const wrapped = new Error('API 返回格式异常：向量数据无效');
+                const wrapped = new Error(uiZh(
+                    'API 返回格式异常：向量数据无效',
+                    'API 回傳格式異常：向量資料無效',
+                ));
                 wrapped.code = 'FORMAT';
                 throw wrapped;
             }
             return { vectors };
         } catch (err) {
             if (err.code === 'FORMAT') throw err;
-            const wrapped = new Error(err?.message || 'Invalid JSON response');
+            const wrapped = new Error(err?.message || uiZh(
+                'Invalid JSON response',
+                'API 回傳內容不是有效的 JSON',
+            ));
             wrapped.code = 'FORMAT';
             console.error('[Horae Vector] API embedding 响应解析失败:', err);
             throw wrapped;
@@ -2560,7 +2583,10 @@ export class VectorManager {
         const apiKey = settings.vectorRerankKey || settings.vectorApiKey || '';
         const model = settings.vectorRerankModel || '';
 
-        if (!baseUrl || !model) throw new Error('Rerank API 地址或模型未配置');
+        if (!baseUrl || !model) throw new Error(uiZh(
+            'Rerank API 地址或模型未配置',
+            'Rerank API 網址或模型尚未設定',
+        ));
 
         const endpoint = `${baseUrl}/rerank`;
         this._debug(`[Horae Vector] Rerank 请求: ${documents.length} 条候选 → ${endpoint}`);
@@ -2587,7 +2613,10 @@ export class VectorManager {
         const json = await resp.json();
         const results = json.results || json.data;
         if (!Array.isArray(results)) {
-            throw new Error('Rerank API 返回格式异常：缺少 results 数组');
+            throw new Error(uiZh(
+                'Rerank API 返回格式异常：缺少 results 数组',
+                'Rerank API 回傳格式異常：缺少 results 陣列',
+            ));
         }
 
         return results.map(r => ({
@@ -2737,9 +2766,12 @@ export class VectorManager {
      * @param {{ label?: string, sourceChatId?: string, sourceChatName?: string }} [info]
      */
     buildSnapshotFromCurrent(sourceChat, info = {}) {
-        if (!Array.isArray(sourceChat)) throw new Error('无效的对话数据');
-        if (!this.isReady) throw new Error('向量模型未就绪');
-        if (this.vectors.size === 0) throw new Error('当前对话没有可导出的向量索引');
+        if (!Array.isArray(sourceChat)) throw new Error(uiZh('无效的对话数据', '無效的對話資料'));
+        if (!this.isReady) throw new Error(uiZh('向量模型未就绪', '向量模型尚未就緒'));
+        if (this.vectors.size === 0) throw new Error(uiZh(
+            '当前对话没有可导出的向量索引',
+            '目前對話沒有可匯出的向量索引',
+        ));
 
         const items = [];
         const sorted = [...this.vectors.entries()].sort((a, b) => a[0] - b[0]);
@@ -2769,7 +2801,7 @@ export class VectorManager {
             items.push(item);
         }
 
-        if (items.length === 0) throw new Error('没有可导出的有效条目');
+        if (items.length === 0) throw new Error(uiZh('没有可导出的有效条目', '沒有可匯出的有效項目'));
 
         return {
             format: SNAPSHOT_FORMAT,
@@ -2843,13 +2875,13 @@ export class VectorManager {
      * 校验外部传入的 snapshot 数据合法性
      */
     _validateSnapshot(obj) {
-        if (!obj || typeof obj !== 'object') throw new Error('快照文件格式无效');
-        if (obj.format !== SNAPSHOT_FORMAT) throw new Error('不是 Horae 记忆快照文件');
-        if (!Array.isArray(obj.items) || obj.items.length === 0) throw new Error('快照内容为空');
-        if (!obj.dimensions || obj.dimensions <= 0) throw new Error('快照缺少维度信息');
+        if (!obj || typeof obj !== 'object') throw new Error(uiZh('快照文件格式无效', '快照檔案格式無效'));
+        if (obj.format !== SNAPSHOT_FORMAT) throw new Error(uiZh('不是 Horae 记忆快照文件', '這不是 Horae 記憶快照檔案'));
+        if (!Array.isArray(obj.items) || obj.items.length === 0) throw new Error(uiZh('快照内容为空', '快照內容為空'));
+        if (!obj.dimensions || obj.dimensions <= 0) throw new Error(uiZh('快照缺少维度信息', '快照缺少維度資訊'));
         for (const it of obj.items) {
             if (!Array.isArray(it.vector) || it.vector.length !== obj.dimensions) {
-                throw new Error('快照向量维度与声明不一致');
+                throw new Error(uiZh('快照向量维度与声明不一致', '快照向量維度與宣告不一致'));
             }
         }
     }
@@ -2862,10 +2894,13 @@ export class VectorManager {
     async importSnapshot(snapshotObj, targetChatId = null) {
         this._validateSnapshot(snapshotObj);
         const chatId = targetChatId || this.chatId;
-        if (!chatId) throw new Error('未指定目标对话');
+        if (!chatId) throw new Error(uiZh('未指定目标对话', '未指定目標對話'));
 
         if (this.isReady && this.dimensions && snapshotObj.dimensions !== this.dimensions) {
-            throw new Error(`维度不匹配：快照 ${snapshotObj.dimensions} 维，当前模型 ${this.dimensions} 维。请切换到匹配的模型或重新导出快照。`);
+            throw new Error(uiZh(
+                `维度不匹配：快照 ${snapshotObj.dimensions} 维，当前模型 ${this.dimensions} 维。请切换到匹配的模型或重新导出快照。`,
+                `維度不符：快照 ${snapshotObj.dimensions} 維，目前模型 ${this.dimensions} 維。請切換至相符的模型或重新匯出快照。`,
+            ));
         }
 
         await this._openDB();

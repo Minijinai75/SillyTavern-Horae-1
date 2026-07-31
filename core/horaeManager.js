@@ -4,7 +4,7 @@
  */
 
 import { parseStoryDate, calculateRelativeTime, calculateDetailedRelativeTime, generateTimeReference, formatRelativeTime, formatFullDateTime, getRelativeTimeMeta, setCustomCalendar } from '../utils/timeUtils.js';
-import { detectEffectiveAiLangIsZh, detectEffectiveAiLang } from './i18n.js';
+import { detectEffectiveAiLangIsZh, detectEffectiveAiLang, getLanguage } from './i18n.js';
 import { getPromptDefaultSync } from './promptDefaults.js';
 
 /**
@@ -673,7 +673,7 @@ class HoraeManager {
             
             // 时间参考
             if (sendTimeline) {
-                const timeRef = generateTimeReference(state.timestamp.story_date);
+                const timeRef = generateTimeReference(state.timestamp.story_date, { lang });
                 if (timeRef && timeRef.type === 'standard') {
                     lines.push(`[${L('时间参考','時間參考','Time Ref','時間参考','시간 참조','Время (справка)')}|${L('昨天','昨天','yesterday','昨日','어제','вчера')}=${timeRef.yesterday}|${L('前天','前天','day before','一昨日','그저께','позавчера')}=${timeRef.dayBefore}|${L('3天前','3天前','3 days ago','3日前','3일 전','3 дня назад')}=${timeRef.threeDaysAgo}]`);
                 } else if (timeRef && timeRef.type === 'fantasy') {
@@ -1177,7 +1177,7 @@ class HoraeManager {
                 
                 const getRelativeDesc = (eventDate) => {
                     if (!eventDate || !currentDate) return '';
-                    const result = calculateDetailedRelativeTime(eventDate, currentDate);
+                    const result = calculateDetailedRelativeTime(eventDate, currentDate, { lang });
                     if (result.days === null || result.days === undefined) return '';
                     
                     const meta = getRelativeTimeMeta(result.days, { fromDate: result.fromDate, toDate: result.toDate });
@@ -1359,15 +1359,18 @@ class HoraeManager {
 
     /** 获取好感度等级描述 */
     getAffectionLevel(value) {
-        if (value >= 80) return '挚爱';
-        if (value >= 60) return '亲密';
-        if (value >= 40) return '好感';
-        if (value >= 20) return '友好';
-        if (value >= 0) return '中立';
-        if (value >= -20) return '冷淡';
-        if (value >= -40) return '厌恶';
-        if (value >= -60) return '敌视';
-        return '仇恨';
+        const labels = getLanguage() === 'zh-TW'
+            ? ['摯愛', '親密', '好感', '友好', '中立', '冷淡', '厭惡', '敵視', '仇恨']
+            : ['挚爱', '亲密', '好感', '友好', '中立', '冷淡', '厌恶', '敌视', '仇恨'];
+        if (value >= 80) return labels[0];
+        if (value >= 60) return labels[1];
+        if (value >= 40) return labels[2];
+        if (value >= 20) return labels[3];
+        if (value >= 0) return labels[4];
+        if (value >= -20) return labels[5];
+        if (value >= -40) return labels[6];
+        if (value >= -60) return labels[7];
+        return labels[8];
     }
 
     /**
@@ -3129,13 +3132,13 @@ class HoraeManager {
     _deduplicateChildDesc(childDesc, parentDesc, parentName) {
         if (!childDesc || !parentDesc) return childDesc;
         // 提取父级的"位于"部分
-        const parentLocMatch = parentDesc.match(/^位于(.+?)[。\.]/);
+        const parentLocMatch = parentDesc.match(/^位[于於](.+?)[。\.]/);
         if (!parentLocMatch) return childDesc;
         const parentLocInfo = parentLocMatch[1].trim();
         // 若子级描述也包含父级的地理位置关键词（超过一半的字重合），则认为冗余
         const parentKeywords = parentLocInfo.replace(/[，,、的]/g, ' ').split(/\s+/).filter(k => k.length >= 2);
         if (parentKeywords.length === 0) return childDesc;
-        const childLocMatch = childDesc.match(/^位于(.+?)[。\.]/);
+        const childLocMatch = childDesc.match(/^位[于於](.+?)[。\.]/);
         if (!childLocMatch) return childDesc;
         const childLocInfo = childLocMatch[1].trim();
         let matchCount = 0;
@@ -3146,7 +3149,9 @@ class HoraeManager {
         if (matchCount >= Math.ceil(parentKeywords.length / 2)) {
             const shortName = parentName.length > 4 ? parentName.substring(0, 4) + '…' : parentName;
             const restDesc = childDesc.substring(childLocMatch[0].length).trim();
-            return `位于${shortName}内。${restDesc}`;
+            return this._getAiOutputLang() === 'zh-TW'
+                ? `位於${shortName}內。${restDesc}`
+                : `位于${shortName}内。${restDesc}`;
         }
         return childDesc;
     }
@@ -4401,6 +4406,18 @@ class HoraeManager {
                 stronghold: '[Крепости] Записывайте при изменении статуса крепости (улучшение/строительство/разрушение/обновление описания); пропускайте, если без изменений. Существующие крепости ДОЛЖНЫ использовать точно такие же названия, как в списке ниже — сокращения, переименования и варианты с префиксами запрещены',
             };
         }
+        if (lang === 'zh-TW') {
+            return {
+                bars: '【狀態條——每回合必填，缺少＝不合格！】',
+                attrs: '【多維屬性】僅在初次登場或屬性變化時填寫，沒有變化可省略',
+                skills: '【技能】僅在習得／升級／失去時填寫，沒有變化可省略',
+                equipment: '【裝備】角色穿戴／卸下裝備時填寫，沒有變化可省略',
+                reputation: '【聲望】僅在聲望變化時填寫，沒有變化可省略',
+                level: '【等級與經驗值】僅在升級／降級或經驗值變化時填寫，沒有變化可省略',
+                currency: '【貨幣——發生交易／拾取／消費時必填！】',
+                stronghold: '【據點／基地】據點狀態變化時填寫（升級／建造／損毀／說明變更），沒有變化可省略。現有據點必須始終使用與下方「目前據點」完全一致的名稱，禁止縮寫、改寫或為現有名稱加上前綴變體',
+            };
+        }
         if (lang !== 'zh-CN' && lang !== 'zh-TW') {
             return {
                 bars: '[Status Bars — required every turn, missing = fail!]',
@@ -4441,13 +4458,18 @@ class HoraeManager {
         if (!promptText || typeof promptText !== 'string') return empty;
 
         const headings = this._getRpgSectionHeadingsByLang(lang);
+        const fallbackHeadings = lang === 'zh-TW'
+            ? this._getRpgSectionHeadingsByLang('zh-CN')
+            : null;
         const keys = ['bars', 'attrs', 'skills', 'equipment', 'reputation', 'level', 'currency', 'stronghold'];
         const marks = [];
         for (const key of keys) {
-            const h = headings[key];
-            if (!h) continue;
-            const idx = promptText.indexOf(h);
-            if (idx >= 0) marks.push({ key, idx });
+            const candidates = [headings[key], fallbackHeadings?.[key]].filter(Boolean);
+            const match = candidates
+                .map(h => ({ h, idx: promptText.indexOf(h) }))
+                .filter(x => x.idx >= 0)
+                .sort((a, b) => a.idx - b.idx)[0];
+            if (match) marks.push({ key, idx: match.idx, matchedHeading: match.h });
         }
         marks.sort((a, b) => a.idx - b.idx);
 
@@ -4457,7 +4479,11 @@ class HoraeManager {
         for (let i = 0; i < marks.length; i++) {
             const start = marks[i].idx;
             const end = i + 1 < marks.length ? marks[i + 1].idx : promptText.length;
-            out[marks[i].key] = promptText.slice(start, end).trimEnd();
+            let section = promptText.slice(start, end).trimEnd();
+            if (lang === 'zh-TW' && marks[i].matchedHeading !== headings[marks[i].key]) {
+                section = headings[marks[i].key] + section.slice(marks[i].matchedHeading.length);
+            }
+            out[marks[i].key] = section;
         }
         return out;
     }
@@ -4980,7 +5006,11 @@ class HoraeManager {
         if (rpgActive) tags.push('<horaerpg>...</horaerpg>');
         const lang = this._getAiOutputLang();
         const joined = tags.join(' and ');
-        if (lang === 'zh-CN' || lang === 'zh-TW') {
+        if (lang === 'zh-TW') {
+            const count = tags.length === 2 ? '兩個' : `${tags.length}個`;
+            return `你的回覆末尾必須包含 ${tags.join(' 和 ')} ${count}標籤。\n缺少任何一個標籤＝不合格。`;
+        }
+        if (lang === 'zh-CN') {
             const count = tags.length === 2 ? '两个' : `${tags.length}个`;
             return `你的回复末尾必须包含 ${tags.join(' 和 ')} ${count}标签。\n缺少任何一个标签=不合格。`;
         }

@@ -1,8 +1,8 @@
 # Horae Minijin Fork Notes
 
-> 狀態：Candidate Code Freeze — Pending Verification  
-> 更新：26-07-31 05:11（Asia/Taipei）  
-> 下一步：執行完整自動驗證、SillyTavern 1.18.0 實機矩陣與 Grok 獨立審計；驗證日期目前為「待最終驗證補登」。
+> 狀態：Verified and Published
+> 更新：26-07-31 09:48（Asia/Taipei）
+> 首版功能 commit：`044b355`；已完成自動驗證與 SillyTavern 1.18.0 隔離實機矩陣。
 
 ## Repository lineage
 
@@ -10,6 +10,7 @@
 - Upstream repository: <https://github.com/SenriYuki/SillyTavern-Horae>
 - Fork baseline: upstream `7a8859897bbfc6f0781ac5eb2451bc607e2bab95` (`7a88598`), Horae v1.15.1.
 - First fork release: `1.15.1-minijin.1`.
+- First fork release commit: `044b355912677e1d606288752cc54eac453b89e4`.
 - Git remotes:
   - `origin` → `https://github.com/Minijinai75/SillyTavern-Horae-1.git`
   - `upstream` → `https://github.com/SenriYuki/SillyTavern-Horae.git`
@@ -57,7 +58,19 @@
 - The CORS fallback path is corrected from the obsolete query form to the SillyTavern 1.18.0 route form: `/proxy/${encodeURIComponent(url)}`.
 - Public Port API context uses a filtered facade and does not expose Horae/ST credential containers.
 - The upstream `event_types.MESSAGE_RENDERED` registration is known to be dead under SillyTavern 1.18.0 and is deliberately **not** repaired in this fork release; it is outside the post-response extraction patch.
-- Verification status remains Pending Verification until the complete implementation is finished and tested together.
+
+## Verification record
+
+- Verification date: 26-07-31 (Asia/Taipei).
+- Static gates: JavaScript syntax, all eight shipped JSON files, extension Kit 8/8, secret-pattern scan, and `git diff --check`.
+- Unit tests: `node --test tests/postResponseExtraction.test.mjs` — 7/7 passed.
+- SillyTavern 1.18.0 isolated runtime matrix:
+  - Legacy default-off behavior and post-response prompt isolation.
+  - Asynchronous settlement, persistence after reload, next-turn memory, and the two-second join budget.
+  - Auxiliary API 401, 500, malformed output, and missing-tag failures without main-API fallback.
+  - Direct CORS failure followed by successful SillyTavern proxy routing.
+  - Delayed and streaming main responses.
+  - Edit, overswipe, and chat-switch stale-result protection, including per-swipe sidecar persistence.
 
 ## Authorship and licensing
 

@@ -75,6 +75,10 @@ function _isTrustedEngineTag(tag) {
     return TRUSTED_ENGINE_TAGS.has(tag);
 }
 
+function _uiZh(zhCN, zhTW) {
+    return getLanguage() === 'zh-TW' ? zhTW : zhCN;
+}
+
 function _getPublicSettingsSnapshot() {
     const snapshot = typeof structuredClone === 'function'
         ? structuredClone(settings)
@@ -92,8 +96,8 @@ function _getPublicSettingsSnapshot() {
 const HORAE_REGEX_RULES = [
     {
         id: 'horae_think_sanitize',
-        scriptName: 'Horae - 思维链标签安全化',
-        description: '将思维链内的<horae>等标签转为全角括号，防止DOM解析冲突与收束误吞',
+        scriptName: 'Horae - 思維鏈標籤安全化',
+        description: '將思維鏈內的 <horae> 等標籤轉為全形括號，避免 DOM 解析衝突與收束誤吞',
         findRegex: '/<(\\/?horae(?:event|rpg|table[^>]*)?)>(?=[\\s\\S]*?<\\/think(?:ing)?>)/gi',
         replaceString: '‹$1›',
         trimStrings: [],
@@ -108,8 +112,8 @@ const HORAE_REGEX_RULES = [
     },
     {
         id: 'horae_hide',
-        scriptName: 'Horae - 隐藏状态标签',
-        description: '隐藏<horae>状态标签，不显示在正文，不发送给AI',
+        scriptName: 'Horae - 隱藏狀態標籤',
+        description: '隱藏 <horae> 狀態標籤，不顯示於正文，也不傳送給 AI',
         findRegex: '/(?:<horae>(?:(?!<\\/think(?:ing)?>|<horae>)[\\s\\S])*?<\\/horae>|<!--horae[\\s\\S]*?-->)/gim',
         replaceString: '',
         trimStrings: [],
@@ -124,8 +128,8 @@ const HORAE_REGEX_RULES = [
     },
     {
         id: 'horae_event_display_only',
-        scriptName: 'Horae - 隐藏事件标签',
-        description: '隐藏<horaeevent>事件标签的显示，不发送给AI',
+        scriptName: 'Horae - 隱藏事件標籤',
+        description: '隱藏 <horaeevent> 事件標籤，不顯示於正文，也不傳送給 AI',
         findRegex: '/<horaeevent>(?:(?!<\\/think(?:ing)?>|<horaeevent>)[\\s\\S])*?<\\/horaeevent>/gim',
         replaceString: '',
         trimStrings: [],
@@ -140,8 +144,8 @@ const HORAE_REGEX_RULES = [
     },
     {
         id: 'horae_table_hide',
-        scriptName: 'Horae - 隐藏表格标签',
-        description: '隐藏<horaetable>标签，不显示在正文，不发送给AI',
+        scriptName: 'Horae - 隱藏表格標籤',
+        description: '隱藏 <horaetable> 標籤，不顯示於正文，也不傳送給 AI',
         findRegex: '/<horaetable[:\\uff1a][\\s\\S]*?<\\/horaetable(?:[:\\uff1a][^>]*)?>/gim',
         replaceString: '',
         trimStrings: [],
@@ -156,8 +160,8 @@ const HORAE_REGEX_RULES = [
     },
     {
         id: 'horae_rpg_hide',
-        scriptName: 'Horae - 隐藏RPG标签',
-        description: '隐藏<horaerpg>标签，不显示在正文，不发送给AI',
+        scriptName: 'Horae - 隱藏 RPG 標籤',
+        description: '隱藏 <horaerpg> 標籤，不顯示於正文，也不傳送給 AI',
         findRegex: '/<horaerpg>(?:(?!<\\/think(?:ing)?>|<horaerpg>)[\\s\\S])*?<\\/horaerpg>/gim',
         replaceString: '',
         trimStrings: [],
@@ -1331,7 +1335,10 @@ function _recordPortError(port, error) {
     horaePortErrors.set(port.id, count);
     console.error(`[Horae] 端口 ${port.id} 运行出错 (${count}/${HORAE_PORT_ERROR_LIMIT})`, error);
     if (count >= HORAE_PORT_ERROR_LIMIT) {
-        showToast(`端口 ${port.id} 多次出错，已自动卸载`, 'error');
+        showToast(_uiZh(
+            `端口 ${port.id} 多次出错，已自动卸载`,
+            `連接埠 ${port.id} 多次發生錯誤，已自動卸載`,
+        ), 'error');
         unregisterHoraePort(port.id);
     }
 }
@@ -2547,7 +2554,8 @@ function updateTimelineDisplay() {
 
         const result = calculateDetailedRelativeTime(
             e.timestamp?.story_date || '',
-            currentDate
+            currentDate,
+            { lang: getLanguage() },
         );
         const relTime = result.relative;
         const levelClass = isSummary ? 'summary' :
@@ -3964,17 +3972,17 @@ async function compressSelectedTimelineEvents() {
         const hasCloseSummaryTag = /<\/horaesummary>/i.test(cleanedText);
         if (hasOpenSummaryTag && !hasCloseSummaryTag) {
             overlay.remove();
-            showToast('总结失败：AI回复截断', 'warning');
+            showToast(_uiZh('总结失败：AI回复截断', '摘要失敗：AI 回覆遭截斷'), 'warning');
             return;
         }
         if (!hasOpenSummaryTag && !hasCloseSummaryTag) {
             overlay.remove();
-            showToast('总结失败：AI回复掉格式', 'warning');
+            showToast(_uiZh('总结失败：AI回复掉格式', '摘要失敗：AI 回覆格式錯誤'), 'warning');
             return;
         }
         if (!hasOpenSummaryTag || !hasCloseSummaryTag) {
             overlay.remove();
-            showToast('总结失败：AI回复掉格式', 'warning');
+            showToast(_uiZh('总结失败：AI回复掉格式', '摘要失敗：AI 回覆格式錯誤'), 'warning');
             return;
         }
         const summaryMatch = cleanedText.match(/<horaesummary>([\s\S]*?)<\/horaesummary>/i);
@@ -5503,7 +5511,7 @@ async function aiEnrichNpc(name, aliases = []) {
         `- Output language: ${langName}\n` +
         `- Each field 1-2 short sentences max; leave empty string "" if not enough info.\n` +
         `- "gender" should be one of: 男 / 女 / or a short custom string / "" if unknown.\n` +
-        `- "age" should be a short string like "20" / "约30岁" / "" if unknown.\n` +
+        `- "age" should be a short string like ${targetLang === 'zh-TW' ? '"20" / "約 30 歲" / ""' : '"20" / "约30岁" / ""'} if unknown.\n` +
         `- Stay faithful: never invent facts not present in the messages.\n\n` +
         `=== MESSAGES (${picked.length} of ${matchCount} hits) ===\n${ctxBlock}\n=== END ===`;
 
@@ -15673,7 +15681,13 @@ function initSettingsEvents() {
         const enabled = this.checked;
         if (enabled && !settings.auxApiEnabled) {
             // 没配辅助 API 直接开重写只会在召回时报错；先提示用户去开
-            showToast(t('toast.queryRewriteRequiresAuxApi') || 'Query 重写需要先启用辅助 API', 'warning');
+            const message = t('toast.queryRewriteRequiresAuxApi');
+            showToast(
+                message === 'toast.queryRewriteRequiresAuxApi'
+                    ? _uiZh('Query 重写需要先启用辅助 API', 'Query 重寫需要先啟用輔助 API')
+                    : message,
+                'warning',
+            );
             this.checked = false;
             settings.vectorQueryRewriteEnabled = false;
             saveSettings();
@@ -17040,7 +17054,9 @@ function _updateVectorStatus() {
         const indexPart = vectorManager.vectors.size > 0
             ? t('ui.vectorIndexCount', { n: vectorManager.vectors.size })
             : '';
-        const snapPart = snapItems > 0 ? `（+${snapItems} 历史记忆）` : '';
+        const snapPart = snapItems > 0
+            ? _uiZh(`（+${snapItems} 历史记忆）`, `（+${snapItems} 筆歷史記憶）`)
+            : '';
         countEl.textContent = `${indexPart}${snapPart}`;
     }
 }
@@ -17234,7 +17250,10 @@ async function _initVectorModel() {
             const apiKey = settings.vectorApiKey;
             const apiModel = settings.vectorApiModel;
             if (!apiUrl || !apiKey || !apiModel) {
-                throw new Error('请填写完整的 API 地址、密钥和模型名称');
+                throw new Error(_uiZh(
+                    '请填写完整的 API 地址、密钥和模型名称',
+                    '請填寫完整的 API 網址、金鑰和模型名稱',
+                ));
             }
             await vectorManager.initApi(apiUrl, apiKey, apiModel);
         } else {
@@ -17584,10 +17603,10 @@ function _extractHoraeSummaryText(raw) {
 
 function _showHoraeSummaryFormatWarning(_stageLabel, reason) {
     if (reason === 'truncated') {
-        showToast('总结失败：AI回复截断', 'warning');
+        showToast(_uiZh('总结失败：AI回复截断', '摘要失敗：AI 回覆遭截斷'), 'warning');
         return;
     }
-    showToast('总结失败：AI回复掉格式', 'warning');
+    showToast(_uiZh('总结失败：AI回复掉格式', '摘要失敗：AI 回覆格式錯誤'), 'warning');
 }
 
 function _splitMsgIndicesByLimits(chat, indices, maxMsgs, maxTokens) {
@@ -18158,7 +18177,10 @@ function _buildEmbeddingRequest(rawUrl, apiKey, model, texts) {
 
 /** 通用：从端点拉取模型列表 */
 async function _fetchModelList(rawUrl, apiKey) {
-    if (!rawUrl || !apiKey) throw new Error('请先填写 API 地址和密钥');
+    if (!rawUrl || !apiKey) throw new Error(_uiZh(
+        '请先填写 API 地址和密钥',
+        '請先填寫 API 網址和金鑰',
+    ));
     const isGemini = _isGeminiEmbeddingEndpoint(rawUrl);
     if (isGemini) {
         const base = _geminiEmbeddingBase(rawUrl);
@@ -18735,7 +18757,10 @@ async function generateWithDirectApi(prompt, profile = null, opts = {}) {
     if (!resp.ok) {
         const errText = await resp.text().catch(() => '');
         const hint = _httpStatusHint(resp.status);
-        throw new Error(`独立API ${resp.status}: ${errText.slice(0, 200)}${hint ? `\n💡 ${hint}` : ''}`);
+        throw new Error(_uiZh(
+            `独立API ${resp.status}: ${errText.slice(0, 200)}${hint ? `\n💡 ${hint}` : ''}`,
+            `獨立 API ${resp.status}：${errText.slice(0, 200)}${hint ? `\n💡 ${hint}` : ''}`,
+        ));
     }
     const data = await resp.json();
     const finishReason = data?.choices?.[0]?.finish_reason || '';
@@ -18845,12 +18870,15 @@ async function _geminiNativeRequest(prompt, rawUrl, model, apiKey, opts = {}) {
     const data = await resp.json();
 
     if (data?.promptFeedback?.blockReason) {
-        throw new Error(`Gemini输入安全拦截: ${data.promptFeedback.blockReason}`);
+        throw new Error(_uiZh(
+            `Gemini输入安全拦截: ${data.promptFeedback.blockReason}`,
+            `Gemini 輸入遭安全機制攔截：${data.promptFeedback.blockReason}`,
+        ));
     }
 
     const candidates = data?.candidates;
     if (!candidates?.length) {
-        throw new Error('Gemini API未返回候选内容');
+        throw new Error(_uiZh('Gemini API未返回候选内容', 'Gemini API 未回傳候選內容'));
     }
 
     if (candidates[0]?.finishReason === 'SAFETY') {
@@ -18869,7 +18897,10 @@ async function _geminiNativeRequest(prompt, rawUrl, model, apiKey, opts = {}) {
         ?.join('\n\n') || '';
 
     if (!text) {
-        throw new Error(`Gemini返回空内容 (finishReason: ${candidates[0]?.finishReason || '?'})`);
+        throw new Error(_uiZh(
+            `Gemini返回空内容 (finishReason: ${candidates[0]?.finishReason || '?'})`,
+            `Gemini 回傳空白內容（finishReason：${candidates[0]?.finishReason || '?'}）`,
+        ));
     }
 
     return text;
@@ -19272,7 +19303,9 @@ async function checkAutoSummary() {
             .replace(/\{\{count\}\}/gi, String(bufferEvents.length))
             .replace(/\{\{user\}\}/gi, userName);
         if (includeFullText && sourceText && !hasFullTextPlaceholder) {
-            prompt += `\n\n【全文对话记录】：\n${sourceText}`;
+            prompt += detectEffectiveAiLang(settings) === 'zh-TW'
+                ? `\n\n【完整對話紀錄】：\n${sourceText}`
+                : `\n\n【全文对话记录】：\n${sourceText}`;
         }
 
         const response = await generateForSummary(prompt);
@@ -19286,7 +19319,10 @@ async function checkAutoSummary() {
             if (extracted.reason === 'empty') {
                 showToast(t('toast.autoSummaryCleanedEmpty'), 'warning');
             } else {
-                _showHoraeSummaryFormatWarning('自动总结', extracted.reason);
+                _showHoraeSummaryFormatWarning(
+                    _uiZh('自动总结', '自動摘要'),
+                    extracted.reason,
+                );
             }
             return;
         }
@@ -19513,7 +19549,9 @@ async function batchAIScan() {
                 const nextMeta = nextMsg.horae_meta;
                 if (nextMeta?.events?.length > 0) { i++; continue; }
                 if (isEmptyOrCodeLayer(nextMsg.mes) && isEmptyOrCodeLayer(msg.mes)) { i++; skippedEmpty++; continue; }
-                const combined = `[USER行动]\n${_stripConfiguredTags(msg.mes)}\n\n[AI回复]\n${_stripConfiguredTags(nextMsg.mes)}`;
+                const combined = detectEffectiveAiLang(settings) === 'zh-TW'
+                    ? `[USER 行動]\n${_stripConfiguredTags(msg.mes)}\n\n[AI 回覆]\n${_stripConfiguredTags(nextMsg.mes)}`
+                    : `[USER行动]\n${_stripConfiguredTags(msg.mes)}\n\n[AI回复]\n${_stripConfiguredTags(nextMsg.mes)}`;
                 targets.push({ index: i + 1, text: combined });
                 i++;
             }
@@ -19619,13 +19657,17 @@ async function executeBatchScan(batches, options = {}) {
     const scanResults = [];
 
     // 动态构建允许的标签
+    const batchLang = detectEffectiveAiLang(settings);
+    const useTraditionalBatchPrompt = batchLang === 'zh-TW';
     let allowedTags = 'time、item、event';
-    let forbiddenNote = '禁止输出 agenda/costume/location/atmosphere/characters';
+    let forbiddenNote = useTraditionalBatchPrompt
+        ? '禁止輸出 agenda/costume/location/atmosphere/characters'
+        : '禁止输出 agenda/costume/location/atmosphere/characters';
     if (!includeNpc) forbiddenNote += '/npc';
     if (!includeAffection) forbiddenNote += '/affection';
     if (!includeScene) forbiddenNote += '/scene_desc';
     if (!includeRelationship) forbiddenNote += '/rel';
-    forbiddenNote += ' 等其他标签';
+    forbiddenNote += useTraditionalBatchPrompt ? ' 等其他標籤' : ' 等其他标签';
     if (includeNpc) allowedTags += '、npc';
     if (includeAffection) allowedTags += '、affection';
     if (includeScene) allowedTags += '、scene_desc';
@@ -19637,7 +19679,9 @@ async function executeBatchScan(batches, options = {}) {
         textEl.textContent = t('toast.aiBatchDone', { n: `${b + 1}/${batches.length}` });
         fillEl.style.width = `${Math.round((b / batches.length) * 100)}%`;
 
-        const messagesBlock = batch.map(msg => `【消息#${msg.index}】\n${msg.text}`).join('\n\n');
+        const messagesBlock = batch.map(msg => useTraditionalBatchPrompt
+            ? `【訊息#${msg.index}】\n${msg.text}`
+            : `【消息#${msg.index}】\n${msg.text}`).join('\n\n');
 
         // 自定义摘要prompt或默认
         let batchPrompt;
@@ -19645,6 +19689,69 @@ async function executeBatchScan(batches, options = {}) {
             batchPrompt = settings.customBatchPrompt
                 .replace(/\{\{user\}\}/gi, userName)
                 .replace(/\{\{messages\}\}/gi, messagesBlock);
+        } else if (useTraditionalBatchPrompt) {
+            let extraFormat = '';
+            let extraRules = '';
+            if (includeNpc) {
+                extraFormat += `\nnpc:角色名|外貌=個性@與${userName}的關係~性別:值~年齡:值~種族:值~職業:值（僅在初次登場或資訊變化時填寫）`;
+                extraRules += `\n· NPC：初次登場時完整記錄（包含 ~ 擴充欄位），之後僅在變化時填寫`;
+            }
+            if (includeAffection) {
+                extraFormat += `\naffection:角色名=好感度數值（僅限 NPC 對${userName}的好感，從文字中擷取既有數值）`;
+                extraRules += `\n· 好感度：僅從文字中擷取明確出現的好感度數值，禁止自行推斷`;
+            }
+            if (includeScene) {
+                extraFormat += `\nlocation:目前地點名稱（場景發生的地點，多層級以 · 分隔，例如「酒館·大廳」）\nscene_desc:位於…。該地點的固定物理特徵描述（50-150 字，僅在初次抵達或發生永久變化時填寫）`;
+                extraRules += `\n· 場景：location 行填寫地點名稱（每則訊息都要填寫），scene_desc 行僅在初次抵達新地點時填寫；子層級地點僅填寫相對於父層級的方位`;
+            }
+            if (includeRelationship) {
+                extraFormat += `\nrel:角色A>角色B=關係類型|備註（角色間關係發生變化時輸出）`;
+                extraRules += `\n· 關係：僅在關係建立或變化時填寫，格式為 rel:角色A>角色B=關係類型，備註可省略`;
+            }
+
+            batchPrompt = `你是劇情分析助理。請逐一分析以下對話紀錄，為每則訊息擷取【${allowedTags}】。
+
+核心原則：
+- 僅擷取文字中明確出現的資訊，禁止虛構
+- 每則訊息獨立分析，以 ===訊息#編號=== 分隔
+- 嚴格只輸出 ${allowedTags} 標籤，${forbiddenNote}
+
+${messagesBlock}
+
+【輸出格式】每則訊息請依照以下格式輸出：
+
+===訊息#編號===
+<horae>
+time:日期 時間（從文字中擷取，例如 2026/2/4 15:00 或 霜降月第三日 黃昏）
+item:emoji物品名(數量)|描述=持有者@位置（新取得的物品，一般物品可省略描述）
+item!:emoji物品名(數量)|描述=持有者@位置（重要物品，描述必填）
+item-:物品名（消耗／遺失／用完的物品）${extraFormat}
+</horae>
+<horaeevent>
+event:重要程度|事件描述
+</horaeevent>
+
+【規則】
+· time：從文字中擷取目前場景的日期時間，必填（沒有明確時間時，根據上下文推斷）
+· event：本則訊息中發生的關鍵劇情，每則訊息至少一個 event
+· 物品僅在取得、消耗或狀態改變時記錄，沒有變化就不填寫 item 行
+· item 格式：以 emoji 開頭，例如 🔑🍞；單件不填寫 (1)；位置必須精確（❌地上 ✅酒館大廳桌上）
+· 重要程度判斷：日常對話=一般，推動劇情=重要，關鍵轉折=關鍵
+· ${userName} 是主角名稱${extraRules}
+· 再次強調：只允許 ${allowedTags}，${forbiddenNote}
+
+═══ 【事件摘要(event)】撰寫規則 ═══
+★ 核心目標：為未來的 AI 提供資訊無損的「前情提要」，內容必須具體且資訊密集，字數控制在 80-150 字。
+★ 必須包含以下關鍵要素（5W1H）：
+  ① 核心互動：誰對誰做了什麼／說了什麼關鍵的話？（寫出具體動作或核心台詞大意）
+  ② 狀態／情緒轉變：角色的心理、態度或關係發生了什麼微妙變化？（例如：從防備轉為信任、萌生愛意等）
+  ③ 新資訊／結果：本回合推進了什麼劇情？（獲得什麼線索、達成什麼共識、發生什麼變故）
+  ④ 伏筆／懸念（若有）：留下了什麼尚未解決的問題？
+★ 嚴禁空泛敘述：
+  ❌ 錯誤示範：「U 和艾倫在酒館聊天，兩人聊得很開心，最後約定下次再見。」（毫無細節）
+  ✅ 正確示範：「U 在酒館向艾倫打聽黑市商人的下落，艾倫起初保持警戒，但在 U 遞出 10 枚金幣後，透露商人明晚會在廢棄碼頭出現。艾倫對 U 的態度由戒備轉為貪婪。兩人約定明晚一起行動。」
+★ 嚴禁憑空捏造：禁止寫出原文未明確指出的情緒（禁止使用「這引出了……的珍視」、「體現了……的心態」等閱讀理解句型）。
+★ 嚴禁氣氛總結：禁止出現「顯得……帶有生活氣息」、「氣氛變得……」等主觀感想。`;
         } else {
             let extraFormat = '';
             let extraRules = '';
@@ -19911,7 +20018,7 @@ function showScanReviewModal(scanResults, scanOptions) {
     const deletedSet = new Set();
 
     const tabs = [
-        { id: 'events', label: '剧情轨迹', icon: 'fa-clock-rotate-left', items: categories.events },
+        { id: 'events', label: '劇情軌跡', icon: 'fa-clock-rotate-left', items: categories.events },
         { id: 'items', label: t('tabs.items'), icon: 'fa-box-open', items: categories.items },
         { id: 'npcs', label: t('tabs.characters'), icon: 'fa-user', items: categories.npcs },
         { id: 'affection', label: t('characters.affection'), icon: 'fa-heart', items: categories.affection },
@@ -19938,7 +20045,8 @@ function showScanReviewModal(scanResults, scanOptions) {
         const itemsHtml = tab.items.map(item => {
             const itemKey = escapeHtml(makeReviewKey(item));
             const levelAttr = item.level ? ` data-level="${escapeHtml(item.level)}"` : '';
-            const levelBadge = item.level ? `<span class="horae-level-badge ${(item.level === '关键' || item.level === '關鍵') ? 'critical' : item.level === '重要' ? 'important' : ''}" style="font-size:10px;margin-right:4px;">${escapeHtml(item.level)}</span>` : '';
+            const displayLevel = item.level === '关键' && getLanguage() === 'zh-TW' ? '關鍵' : item.level;
+            const levelBadge = item.level ? `<span class="horae-level-badge ${(item.level === '关键' || item.level === '關鍵') ? 'critical' : item.level === '重要' ? 'important' : ''}" style="font-size:10px;margin-right:4px;">${escapeHtml(displayLevel)}</span>` : '';
             const descHtml = item.desc ? `<div class="horae-review-item-sub" style="font-style:italic;opacity:0.8;">📝 ${escapeHtml(item.desc)}</div>` : '';
             return `<div class="horae-review-item" data-key="${itemKey}"${levelAttr}>
                 <div class="horae-review-item-body">
@@ -21078,7 +21186,10 @@ function _importAsInitialState(importObj, chat, options = {}) {
         .map(d => d.horae_meta)
         .filter(Boolean);
 
-    if (!allMetas.length) throw new Error('导出文件中无有效元数据');
+    if (!allMetas.length) throw new Error(_uiZh(
+        '导出文件中无有效元数据',
+        '匯出檔案中沒有有效的中繼資料',
+    ));
     if (!chat[0].horae_meta) chat[0].horae_meta = createEmptyMeta();
     const target = chat[0].horae_meta;
 

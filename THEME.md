@@ -1,12 +1,12 @@
-# Horae 美化指南
+# Horae 外觀自訂指南
 
-## 快速开始
+## 快速開始
 
-Horae 的所有视觉样式由 **CSS 变量** 控制。只需覆盖这些变量，即可改变整个插件外观。
+Horae 的所有視覺樣式都由 **CSS 變數** 控制。只要覆寫這些變數，就能改變整個擴充功能的外觀。
 
-### 方式一：修改 CSS 变量（推荐）
+### 方式一：修改 CSS 變數（建議）
 
-在插件设置 → 外观设置 → 自定义CSS 中输入：
+在擴充功能設定 → 外觀設定 → 自訂 CSS 中輸入：
 
 ```css
 #horae_drawer,
@@ -14,159 +14,159 @@ Horae 的所有视觉样式由 **CSS 变量** 控制。只需覆盖这些变量�
 .horae-modal,
 .horae-context-menu,
 .horae-progress-overlay {
-    --horae-primary: #ec4899;      /* 主色改为粉色 */
+    --horae-primary: #ec4899;      /* 主色改為粉紅色 */
     --horae-primary-light: #f472b6;
-    --horae-bg: #1a1020;           /* 背景改为深紫 */
+    --horae-bg: #1a1020;           /* 背景改為深紫色 */
     --horae-bg-secondary: #2d1f3c;
 }
 ```
 
-### 方式二：导入美化文件
+### 方式二：匯入主題檔案
 
-1. 获取他人分享的 `.json` 美化文件
-2. 插件设置 → 外观设置 → 点击导入按钮（📥）
-3. 在主题下拉列表中选择导入的美化
+1. 取得別人分享的 `.json` 主題檔案
+2. 擴充功能設定 → 外觀設定 → 點選匯入按鈕（📥）
+3. 在主題下拉選單中選擇匯入的主題
 
-### 方式三：导出并分享
+### 方式三：匯出並分享
 
-1. 调好你喜欢的样式后，点击导出按钮（📤）
-2. 会下载一个 `horae-theme.json` 文件
-3. 分享给其他用户即可
+1. 調整好喜歡的樣式後，點選匯出按鈕（📤）
+2. 瀏覽器會下載一個 `horae-theme.json` 檔案
+3. 接著就能分享給其他使用者
 
 ---
 
-## CSS 变量一览
+## CSS 變數一覽
 
 ### 配色
 
-| 变量 | 默认值（暗色） | 说明 |
+| 變數 | 預設值（深色） | 說明 |
 |------|---------------|------|
-| `--horae-primary` | `#7c3aed` | 主色（按钮、高亮、渐变） |
-| `--horae-primary-light` | `#a78bfa` | 主色亮版（文字高亮） |
-| `--horae-primary-dark` | `#5b21b6` | 主色暗版（渐变起点） |
-| `--horae-accent` | `#f59e0b` | 强调色（金色标记、NPC名） |
-| `--horae-success` | `#10b981` | 成功色（好感度正值） |
-| `--horae-warning` | `#f59e0b` | 警告色 |
-| `--horae-danger` | `#ef4444` | 危险色（删除、负好感度） |
-| `--horae-info` | `#3b82f6` | 信息色（NPC外貌标签） |
+| `--horae-primary` | `#7c3aed` | 主色（按鈕、醒目顯示、漸層） |
+| `--horae-primary-light` | `#a78bfa` | 較亮的主色（文字醒目顯示） |
+| `--horae-primary-dark` | `#5b21b6` | 較深的主色（漸層起點） |
+| `--horae-accent` | `#f59e0b` | 強調色（金色標記、NPC 名稱） |
+| `--horae-success` | `#10b981` | 成功色（好感度為正值） |
+| `--horae-warning` | `#f59e0b` | 警示色 |
+| `--horae-danger` | `#ef4444` | 危險色（刪除、負好感度） |
+| `--horae-info` | `#3b82f6` | 資訊色（NPC 外貌標籤） |
 
-### 背景与边框
+### 背景與邊框
 
-| 变量 | 默认值（暗色） | 说明 |
+| 變數 | 預設值（深色） | 說明 |
 |------|---------------|------|
-| `--horae-bg` | `#1e1e28` | 主背景（区块、卡片） |
-| `--horae-bg-secondary` | `#2d2d3c` | 次级背景（容器、表头） |
-| `--horae-bg-hover` | `#3c3c50` | 悬停背景 |
-| `--horae-border` | `rgba(255,255,255,0.1)` | 边框色 |
+| `--horae-bg` | `#1e1e28` | 主要背景（區塊、卡片） |
+| `--horae-bg-secondary` | `#2d2d3c` | 次要背景（容器、表頭） |
+| `--horae-bg-hover` | `#3c3c50` | 游標停留時的背景 |
+| `--horae-border` | `rgba(255,255,255,0.1)` | 邊框顏色 |
 
 ### 文字
 
-| 变量 | 默认值（暗色） | 说明 |
+| 變數 | 預設值（深色） | 說明 |
 |------|---------------|------|
-| `--horae-text` | `#e5e5e5` | 主文字色 |
-| `--horae-text-muted` | `#a0a0a0` | 次级文字色（标签、提示） |
+| `--horae-text` | `#e5e5e5` | 主要文字顏色 |
+| `--horae-text-muted` | `#a0a0a0` | 次要文字顏色（標籤、提示） |
 
-### 雷达图
+### 雷達圖
 
-| 变量 | 默认值 | 说明 |
+| 變數 | 預設值 | 說明 |
 |------|--------|------|
-| `--horae-radar-color` | 跟随 `--horae-primary` | 雷达图数据区颜色（填充/描边/顶点） |
-| `--horae-radar-label` | 跟随 `--horae-text` | 雷达图标签文字颜色 |
+| `--horae-radar-color` | 跟隨 `--horae-primary` | 雷達圖資料區域的顏色（填色／邊線／頂點） |
+| `--horae-radar-label` | 跟隨 `--horae-text` | 雷達圖標籤的文字顏色 |
 
 ### 其他
 
-| 变量 | 默认值 | 说明 |
+| 變數 | 預設值 | 說明 |
 |------|--------|------|
-| `--horae-shadow` | `0 4px 20px rgba(0,0,0,0.3)` | 阴影 |
-| `--horae-radius` | `8px` | 大圆角 |
-| `--horae-radius-sm` | `4px` | 小圆角 |
+| `--horae-shadow` | `0 4px 20px rgba(0,0,0,0.3)` | 陰影 |
+| `--horae-radius` | `8px` | 大圓角 |
+| `--horae-radius-sm` | `4px` | 小圓角 |
 
 ---
 
-## 主要容器类名
+## 主要容器類別名稱
 
-想针对特定区域微调样式时，使用以下选择器：
+若要微調特定區域的樣式，請使用下列選擇器：
 
-### 顶级容器
+### 頂層容器
 
-| 选择器 | 说明 |
+| 選擇器 | 說明 |
 |--------|------|
-| `#horae_drawer` | 主抽屉面板（设置、状态、时间线等） |
-| `.horae-message-panel` | 消息底部的元数据面板 |
-| `.horae-modal` | 所有模态弹窗 |
-| `.horae-context-menu` | 右键菜单 |
-| `.horae-progress-overlay` | 进度覆盖层 |
+| `#horae_drawer` | 主抽屜面板（設定、狀態、時間軸等） |
+| `.horae-message-panel` | 訊息底部的中繼資料面板 |
+| `.horae-modal` | 所有模態對話框 |
+| `.horae-context-menu` | 右鍵選單 |
+| `.horae-progress-overlay` | 進度遮罩層 |
 
-### 抽屉内部
+### 抽屜內部
 
-| 选择器 | 说明 |
+| 選擇器 | 說明 |
 |--------|------|
-| `.horae-tabs` | 标签页导航栏 |
-| `.horae-tab` | 单个标签页按钮 |
-| `.horae-tab-contents` | 标签页内容容器 |
-| `.horae-state-section` | 状态区块（仪表板内的各个卡片） |
-| `.horae-settings-section` | 设置区块 |
+| `.horae-tabs` | 分頁導覽列 |
+| `.horae-tab` | 單一分頁按鈕 |
+| `.horae-tab-contents` | 分頁內容容器 |
+| `.horae-state-section` | 狀態區塊（儀表板內的各張卡片） |
+| `.horae-settings-section` | 設定區塊 |
 
-### 数据展示
+### 資料顯示
 
-| 选择器 | 说明 |
+| 選擇器 | 說明 |
 |--------|------|
-| `.horae-timeline-item` | 时间线事件卡片 |
-| `.horae-timeline-list` | 时间线列表容器 |
-| `.horae-affection-item` | 好感度条目 |
+| `.horae-timeline-item` | 時間軸事件卡片 |
+| `.horae-timeline-list` | 時間軸清單容器 |
+| `.horae-affection-item` | 好感度項目 |
 | `.horae-npc-item` | NPC 卡片 |
-| `.horae-full-item` | 物品条目 |
-| `.horae-item-tag` | 物品标签（小圆角胶囊） |
-| `.horae-agenda-item` | 待办事项条目 |
-| `.horae-relationship-item` | 关系网络条目 |
-| `.horae-relationship-list` | 关系网络列表容器 |
-| `.horae-location-card` | 场景记忆卡片 |
-| `.horae-mood-tag` | 情绪标签（圆角胶囊） |
-| `.horae-panel-rel-row` | 底部面板关系行 |
-| `.horae-empty-hint` | 空数据提示文字 |
+| `.horae-full-item` | 物品項目 |
+| `.horae-item-tag` | 物品標籤（圓角小膠囊） |
+| `.horae-agenda-item` | 待辦事項 |
+| `.horae-relationship-item` | 關係網路項目 |
+| `.horae-relationship-list` | 關係網路清單容器 |
+| `.horae-location-card` | 場景記憶卡片 |
+| `.horae-mood-tag` | 情緒標籤（圓角膠囊） |
+| `.horae-panel-rel-row` | 底部面板的關係列 |
+| `.horae-empty-hint` | 沒有資料時的提示文字 |
 
-### 摘要与压缩
+### 摘要與壓縮
 
-| 选择器 | 说明 |
+| 選擇器 | 說明 |
 |--------|------|
-| `.horae-timeline-item.summary` | 摘要事件卡片（active 状态） |
-| `.horae-timeline-item.horae-summary-collapsed` | 已展开为原始事件时的折叠指示条 |
-| `.horae-summary-actions` | 摘要卡片上的切换/删除按钮容器 |
-| `.horae-summary-toggle-btn` | 摘要/时间线切换按钮 |
-| `.horae-summary-delete-btn` | 删除摘要按钮 |
-| `.horae-compressed-restored` | 被摘要覆盖但当前已恢复显示的事件（虚线框） |
+| `.horae-timeline-item.summary` | 摘要事件卡片（active 狀態） |
+| `.horae-timeline-item.horae-summary-collapsed` | 展開原始事件時顯示的收合指示列 |
+| `.horae-summary-actions` | 摘要卡片上的切換／刪除按鈕容器 |
+| `.horae-summary-toggle-btn` | 摘要／時間軸切換按鈕 |
+| `.horae-summary-delete-btn` | 刪除摘要按鈕 |
+| `.horae-compressed-restored` | 已被摘要取代但目前恢復顯示的事件（虛線框） |
 
-### 自定义表格
+### 自訂表格
 
-| 选择器 | 说明 |
+| 選擇器 | 說明 |
 |--------|------|
-| `.horae-excel-table-container` | 表格外层容器 |
-| `.horae-excel-table` | 表格主体 `<table>` |
-| `.horae-excel-table th` | 表头单元格 |
-| `.horae-excel-table td` | 数据单元格 |
-| `.horae-table-prompt-row` | 表格底部提示词区域 |
+| `.horae-excel-table-container` | 表格外層容器 |
+| `.horae-excel-table` | 表格主體 `<table>` |
+| `.horae-excel-table th` | 表頭儲存格 |
+| `.horae-excel-table td` | 資料儲存格 |
+| `.horae-table-prompt-row` | 表格底部的提示詞區域 |
 
-### 按钮
+### 按鈕
 
-| 选择器 | 说明 |
+| 選擇器 | 說明 |
 |--------|------|
-| `.horae-btn` | 通用按钮 |
-| `.horae-btn.primary` | 主色按钮（紫色渐变） |
-| `.horae-btn.danger` | 危险按钮（红色） |
-| `.horae-icon-btn` | 小图标按钮（28×28） |
-| `.horae-data-btn` | 数据管理大按钮（带图标+文字） |
-| `.horae-data-btn.primary` | 主功能按钮（跨两列） |
+| `.horae-btn` | 一般按鈕 |
+| `.horae-btn.primary` | 主色按鈕（紫色漸層） |
+| `.horae-btn.danger` | 危險操作按鈕（紅色） |
+| `.horae-icon-btn` | 小圖示按鈕（28×28） |
+| `.horae-data-btn` | 資料管理大型按鈕（包含圖示＋文字） |
+| `.horae-data-btn.primary` | 主要功能按鈕（橫跨兩欄） |
 
 ---
 
-## 美化文件格式
+## 主題檔案格式
 
-导出的 `.json` 文件结构如下：
+匯出的 `.json` 檔案結構如下：
 
 ```json
 {
-    "name": "我的美化",
-    "author": "你的名字",
+    "name": "我的主題",
+    "author": "你的名稱",
     "version": "1.0",
     "variables": {
         "--horae-primary": "#ec4899",
@@ -180,26 +180,27 @@ Horae 的所有视觉样式由 **CSS 变量** 控制。只需覆盖这些变量�
         "--horae-text": "#e5e5e5",
         "--horae-text-muted": "#a0a0a0"
     },
-    "css": "/* 可选：额外CSS覆盖 */\n.horae-timeline-item { border-radius: 12px; }"
+    "css": "/* 選用：額外 CSS 覆寫 */\n.horae-timeline-item { border-radius: 12px; }"
 }
 ```
 
-**字段说明：**
-- `name`：美化名称（显示在主题选择器中）
-- `author`：作者名（可选）
-- `version`：版本号（可选）
-- `variables`：CSS 变量键值对，会覆盖默认变量
-- `css`：额外的 CSS 代码（可选），用于无法通过变量实现的样式调整
+**欄位說明：**
+
+- `name`：主題名稱（顯示在主題選擇器中）
+- `author`：作者名稱（選用）
+- `version`：版本號（選用）
+- `variables`：CSS 變數的鍵值組，會覆寫預設變數
+- `css`：額外的 CSS 程式碼（選用），用來調整無法透過變數設定的樣式
 
 ---
 
-## 示例美化
+## 主題範例
 
-### 樱花粉
+### 櫻花粉
 
 ```json
 {
-    "name": "樱花粉",
+    "name": "櫻花粉",
     "variables": {
         "--horae-primary": "#ec4899",
         "--horae-primary-light": "#f472b6",
@@ -214,11 +215,11 @@ Horae 的所有视觉样式由 **CSS 变量** 控制。只需覆盖这些变量�
 }
 ```
 
-### 森林绿
+### 森林綠
 
 ```json
 {
-    "name": "森林绿",
+    "name": "森林綠",
     "variables": {
         "--horae-primary": "#059669",
         "--horae-primary-light": "#34d399",
@@ -233,11 +234,11 @@ Horae 的所有视觉样式由 **CSS 变量** 控制。只需覆盖这些变量�
 }
 ```
 
-### 海洋蓝
+### 海洋藍
 
 ```json
 {
-    "name": "海洋蓝",
+    "name": "海洋藍",
     "variables": {
         "--horae-primary": "#3b82f6",
         "--horae-primary-light": "#60a5fa",
@@ -254,11 +255,11 @@ Horae 的所有视觉样式由 **CSS 变量** 控制。只需覆盖这些变量�
 
 ---
 
-## 常见问题 & 美化技巧
+## 常見問題與外觀調整技巧
 
-### 底部面板被其他元素遮挡（无法交互）
+### 底部面板被其他元素遮住（無法互動）
 
-部分酒馆美化或预设的 z-index 较高，导致 Horae 底部面板被盖住。在自定义 CSS 中添加：
+部分酒館主題或預設的 z-index 較高，會遮住 Horae 底部面板。請在自訂 CSS 中加入：
 
 ```css
 .horae-message-panel {
@@ -268,9 +269,9 @@ Horae 的所有视觉样式由 **CSS 变量** 控制。只需覆盖这些变量�
 }
 ```
 
-### 自定义顶部抽屉图标
+### 自訂頂端抽屜圖示
 
-将顶部导航栏的 Horae 图标替换为自定义图片：
+將頂端導覽列的 Horae 圖示換成自訂圖片：
 
 ```css
 #horae_drawer .drawer-icon::before {
@@ -280,12 +281,12 @@ Horae 的所有视觉样式由 **CSS 变量** 控制。只需覆盖这些变量�
 
 ---
 
-## 注意事项
+## 注意事項
 
-1. **变量作用域**：CSS 变量定义在 `#horae_drawer`、`.horae-modal` 等顶级容器上，不要在 `body` 或 `:root` 上定义，否则不会生效。
+1. **變數作用範圍**：CSS 變數定義在 `#horae_drawer`、`.horae-modal` 等頂層容器上。請勿定義在 `body` 或 `:root` 上，否則不會生效。
 
-2. **`!important` 防护**：部分按钮样式带有 `!important` 以抵抗酒馆全局主题干扰。如需覆盖这些样式，你的自定义 CSS 也需要使用 `!important`。
+2. **`!important` 保護**：部分按鈕樣式使用 `!important`，以免受到酒館全域主題干擾。如需覆寫這些樣式，你的自訂 CSS 也要使用 `!important`。
 
-3. **深浅模式**：自定义美化选择后，会覆盖默认的暗色/浅色变量。如果你的美化是浅色系，记得调整 `--horae-text` 为深色。
+3. **明暗模式**：選擇自訂主題後，會覆寫預設的深色／淺色變數。如果你的主題採淺色系，記得將 `--horae-text` 調整成深色。
 
-4. **不影响酒馆**：Horae 的所有样式都限定在插件容器内，不会影响酒馆主界面。
+4. **不影響酒館**：Horae 的所有樣式都限制在擴充功能的容器內，不會影響酒館主畫面。
