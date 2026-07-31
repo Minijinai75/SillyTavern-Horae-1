@@ -1,6 +1,6 @@
-# Horae v1.15.1 - Memory Engine for SillyTavern
+# Horae v1.15.1-minijin.1 - Memory Engine for SillyTavern (Minijin Fork)
 
-**English** | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md)
+**English** | [簡體中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md)
 
 ![Image](https://github.com/SenriYuki/SillyTavern-Horae/blob/main/HoraeLogo.jpg)
 
@@ -9,6 +9,26 @@
 Long-form RP players know the pain: AI memory is basically a goldfish. Yesterday's events become "this morning," costumes change between paragraphs, NPC relationships flip, gifted items vanish, and discarded ones reappear.
 
 **Horae gives your AI a reliable memory ledger using structured time anchors.**
+
+---
+
+## Minijin Fork: Post-response Auxiliary Extraction
+
+This fork is based on upstream commit [`7a88598`](https://github.com/SenriYuki/SillyTavern-Horae/commit/7a8859897bbfc6f0781ac5eb2451bc607e2bab95) and adds an optional post-response extraction mode:
+
+- The feature is **off by default**. With it disabled, Horae keeps the upstream behavior.
+- It reuses the existing **Auxiliary API** URL, key, model, and serial queue; no second credential set is required.
+- With it enabled, the main-model prompt keeps Horae's memory data and recalled context, but omits the tag/output rules.
+- After the main response is displayed, the Auxiliary API asynchronously extracts the original Horae tag format and writes it back to that exact message and swipe.
+- Auxiliary extraction failures **never fall back to the main API**. The completed main response remains available and the user receives a visible error.
+- Before the next main request, Horae joins the matching pending extraction for at most **2 seconds**, then proceeds without an indefinite wait.
+- Settlement is version-locked to the chat, message, swipe, narrative, and memory state, so chat switches, rapid swipes, or manual edits cannot be overwritten by stale work.
+- The switch requires an explicit local user action and a complete Auxiliary API configuration; shared profiles, character cards, and external settings cannot silently enable it.
+- The message panel's manual **AI Analysis** action remains available as a retry path.
+
+Fork target: **SillyTavern 1.18.0**. Final device verification date: **待最終驗證補登**. This line is a verification placeholder, not a claim that final testing has passed.
+
+Fork repository: [Minijinai75/SillyTavern-Horae-1](https://github.com/Minijinai75/SillyTavern-Horae-1). Maintenance details are recorded in [FORK_NOTES.md](FORK_NOTES.md).
 
 ---
 
@@ -57,7 +77,7 @@ Long-form RP players know the pain: AI memory is basically a goldfish. Yesterday
 ## Installation
 
 1. Open SillyTavern → Extensions panel (puzzle icon) → **Install Extension**
-2. Paste this repository's Git URL and click Install
+2. Paste `https://github.com/Minijinai75/SillyTavern-Horae-1.git` and click Install
 3. Refresh the page — done!
 
 > The companion regex is **auto-injected** on first load. No manual import needed.
@@ -66,7 +86,8 @@ Long-form RP players know the pain: AI memory is basically a goldfish. Yesterday
 
 ## Compatibility
 
-- **SillyTavern**: 1.13.0+ (AI analysis requires 1.13.5+)
+- **Upstream compatibility baseline**: SillyTavern 1.13.0+ (AI analysis requires 1.13.5+)
+- **Fork verification target**: SillyTavern 1.18.0 — device-test date: **待最終驗證補登**
 - **Platforms**: Desktop + Mobile
 
 ---
@@ -89,7 +110,7 @@ window.Horae?.getEvents(10)      // → last 10 events
 window.Horae?.getSettings()
 
 // Version string
-window.Horae?.version            // → "1.14.0"
+window.Horae?.version            // → "1.15.1-minijin.1"
 ```
 
 Settings change events are broadcast via SillyTavern's `eventSource`:
@@ -109,7 +130,7 @@ eventSource.on('horae:settingsChanged', (data) => {
 
 | Language                   | Status |
 | -------------------------- | ------ |
-| 简体中文 (Simplified Chinese)  | ✅ Full |
+| 簡體中文 (Simplified Chinese) | ✅ Full |
 | 繁體中文 (Traditional Chinese) | ✅ Full |
 | English                    | ✅ Full |
 | 한국어 (Korean)               | ✅ Full |
@@ -139,7 +160,8 @@ Bug reports and suggestions are welcome!
 
 > ⚠️ This is a side project — replies may be delayed. Thank you for your patience.
 
-**Author: SenriYuki**
+**Original author: SenriYuki**
+**Fork maintainer: Minijinai75**
 
 ### Translation Credits
 
@@ -154,4 +176,3 @@ Bug reports and suggestions are welcome!
 ### Buy me a boba?
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/B8B620XPCL)
-

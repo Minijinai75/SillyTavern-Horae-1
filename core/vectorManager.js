@@ -55,6 +55,11 @@ export class VectorManager {
         }
         this.db = null;
         this.chatId = null;
+        this._chatRef = null;
+        this._chatRevision = 0;
+        this._embeddingRevision = 0;
+        this._messageRevisionCounter = 0;
+        this._messageRevisions = new Map();
         this.vectors = new Map();
         this.isReady = false;
         this.isLoading = false;
@@ -91,6 +96,7 @@ export class VectorManager {
 
     async initModel(model, dtype, onProgress) {
         if (this.isLoading) return;
+        this._embeddingRevision++;
         this.isLoading = true;
         this.isReady = false;
         this.modelName = model;
@@ -157,6 +163,7 @@ export class VectorManager {
      */
     async initApi(url, key, model) {
         if (this.isLoading) return;
+        this._embeddingRevision++;
         this.isLoading = true;
         this.isReady = false;
         this.clearRecallCache('embedding-api-reinit');
@@ -184,12 +191,16 @@ export class VectorManager {
     }
 
     async dispose() {
+        this._embeddingRevision++;
+        this._chatRevision++;
         await this._disposeWorker();
         this.vectors.clear();
         this.termCounts.clear();
         this.totalDocuments = 0;
         this.snapshots = [];
         this.chatId = null;
+        this._chatRef = null;
+        this._messageRevisions.clear();
         this.isReady = false;
         this.isApiMode = false;
         this._apiUrl = '';
@@ -246,7 +257,11 @@ export class VectorManager {
      * 切换聊天：加载对应 chatId 的向量索引
      */
     async loadChat(chatId, chat) {
+        const chatRevision = ++this._chatRevision;
+        const chatRef = Array.isArray(chat) ? chat : [];
+        const mutationBaseline = this._messageRevisionCounter;
         this.chatId = chatId;
+        this._chatRef = chatRef;
         this.vectors.clear();
         this.termCounts.clear();
         this.totalDocuments = 0;
@@ -257,35 +272,76 @@ export class VectorManager {
 
         try {
             await this._openDB();
-            await this._loadSnapshotsForChat(chatId);
-            const stored = await this._loadAllVectors();
+            if (!this._isChatCurrent(chatId, chatRevision, chatRef)) return;
+
+            const snapshots = await this._loadSnapshotsForChat(chatId, false);
+            if (!this._isChatCurrent(chatId, chatRevision, chatRef)) return;
+
+            const stored = await this._loadAllVectors(chatId);
+            if (!this._isChatCurrent(chatId, chatRevision, chatRef)) return;
+
+            const nextVectors = new Map();
             const staleKeys = [];
             for (const item of stored) {
                 // IndexedDB 反序列化偶发返回字符串型 messageIndex，统一为整数避免与 chat 索引比较失效
                 const normalizedIdx = this._normalizeMessageIndex(item.messageIndex);
-                if (normalizedIdx === null || normalizedIdx >= chat.length) {
-                    staleKeys.push(item.messageIndex);
+                if (normalizedIdx === null || normalizedIdx >= chatRef.length) {
+                    staleKeys.push({ messageIndex: item.messageIndex, hash: item.hash });
                     continue;
                 }
-                const meta = chat[normalizedIdx]?.horae_meta;
+
+                // load 期間若該樓層已被 add/remove 更新，保留較新的記憶體狀態，不用舊 DB 快照覆蓋。
+                if (this._getMessageRevision(chatId, normalizedIdx) > mutationBaseline) {
+                    const live = this.vectors.get(normalizedIdx);
+                    if (live) nextVectors.set(normalizedIdx, live);
+                    continue;
+                }
+
+                const meta = chatRef[normalizedIdx]?.horae_meta;
                 const doc = this.buildVectorDocument(meta);
                 if (!doc || this._hashString(doc) !== item.hash) {
-                    staleKeys.push(item.messageIndex);
+                    staleKeys.push({ messageIndex: item.messageIndex, hash: item.hash });
                     continue;
                 }
-                this.vectors.set(normalizedIdx, {
+                nextVectors.set(normalizedIdx, {
                     vector: item.vector,
                     hash: item.hash,
                     document: item.document,
                 });
-                this._updateTermCounts(item.document, 1);
-                this.totalDocuments++;
             }
+
+            if (!this._isChatCurrent(chatId, chatRevision, chatRef)) return;
+
+            // DB 逐筆掃描結束後可能才有 add/remove 完成；在同步提交前再合併一次
+            // 載入期間的較新記憶，避免最後的 Map 指派把剛寫好的向量蓋回舊值。
+            for (let idx = 0; idx < chatRef.length; idx++) {
+                if (this._getMessageRevision(chatId, idx) <= mutationBaseline) continue;
+                const live = this.vectors.get(idx);
+                if (live) nextVectors.set(idx, live);
+                else nextVectors.delete(idx);
+            }
+
+            const nextTermCounts = new Map();
+            for (const entry of nextVectors.values()) {
+                const uniqueTerms = new Set(this._extractKeyTerms(entry.document));
+                for (const term of uniqueTerms) {
+                    nextTermCounts.set(term, (nextTermCounts.get(term) || 0) + 1);
+                }
+            }
+            this.vectors = nextVectors;
+            this.termCounts = nextTermCounts;
+            this.totalDocuments = nextVectors.size;
+            this.snapshots = snapshots;
+
             if (staleKeys.length > 0) {
-                for (const idx of staleKeys) await this._deleteVector(idx);
+                for (const stale of staleKeys) {
+                    await this._deleteVector(stale.messageIndex, chatId, null, stale.hash);
+                }
                 console.log(`[Horae Vector] 清理了 ${staleKeys.length} 条过期/分支外向量`);
             }
-            const snapCount = this.snapshots.reduce((a, s) => a + s.items.length, 0);
+
+            if (!this._isChatCurrent(chatId, chatRevision, chatRef)) return;
+            const snapCount = snapshots.reduce((a, s) => a + s.items.length, 0);
             const snapTxt = snapCount > 0 ? ` (+${snapCount} 条历史记忆, ${this.snapshots.length} 份快照)` : '';
             console.log(`[Horae Vector] 已加载 ${this.vectors.size} 条向量 (chatId: ${chatId})${snapTxt}`);
         } catch (err) {
@@ -362,49 +418,109 @@ export class VectorManager {
     // 索引操作
     // ========================================
 
-    async addMessage(messageIndex, meta) {
-        if (!this.isReady || !this.chatId) return;
-        if (isMetaExcluded(meta)) return;
-
+    async addMessage(messageIndex, meta, guard = {}) {
         const idx = this._normalizeMessageIndex(messageIndex);
         if (idx === null) return;
 
+        const chatId = guard.chatId ?? this.chatId;
+        if (!chatId) return;
+        const chatRevision = guard.chatRevision ?? this._chatRevision;
+        const chatRef = guard.chat ?? this._chatRef;
+        const messageRef = chatRef?.[idx] || null;
         const doc = this.buildVectorDocument(meta);
-        if (!doc) return;
+        const hash = doc ? this._hashString(doc) : '';
 
-        const hash = this._hashString(doc);
+        // 呼叫端可能拿著已被替換的 meta；有目前 chat 參照時，先拒絕明顯過期的呼叫。
+        if (chatRef) {
+            if (!this._isChatCurrent(chatId, chatRevision, chatRef)) return;
+            const currentMessage = chatRef[idx];
+            if (messageRef && currentMessage !== messageRef) return;
+            const currentDoc = this.buildVectorDocument(currentMessage?.horae_meta);
+            if (currentDoc !== doc || (currentDoc && this._hashString(currentDoc) !== hash)) return;
+        }
+
+        const revision = this._markMessageRevision(chatId, idx);
+
+        // 空 meta、番外／種子樓層或空文件都代表該樓層不應有向量；必須清掉舊紀錄。
+        if (!doc) {
+            await this.removeMessage(idx, { chatId, chatRevision, revision });
+            return;
+        }
+
+        // 即使模型重新載入期間無法重建，也要讓上面的 revision 先作廢仍在執行的舊 embedding。
+        if (!this.isReady) return;
+
         const existing = this.vectors.get(idx);
         if (existing && existing.hash === hash) return;
 
+        const embeddingRevision = this._embeddingRevision;
+        const snapshot = {
+            chatId,
+            chatRevision,
+            chatRef,
+            messageRef,
+            messageIndex: idx,
+            metaRef: meta,
+            document: doc,
+            hash,
+            revision,
+            embeddingRevision,
+        };
         const text = this._prepareText(doc, false);
         const result = await this._embed([text]);
         if (!result || !result.vectors?.[0]) return;
+        if (!this._isMessageSnapshotCurrent(snapshot)) return;
 
         const vector = result.vectors[0];
+        const saved = await this._saveVector(
+            idx,
+            { vector, hash, document: doc },
+            chatId,
+            () => this._isMessageSnapshotCurrent(snapshot),
+        );
+        if (!saved || !this._isMessageSnapshotCurrent(snapshot)) return;
 
-        if (existing) {
-            this._updateTermCounts(existing.document, -1);
+        const current = this.vectors.get(idx);
+        if (current) {
+            this._updateTermCounts(current.document, -1);
         } else {
             this.totalDocuments++;
         }
 
         this.vectors.set(idx, { vector, hash, document: doc });
         this._updateTermCounts(doc, 1);
-        await this._saveVector(idx, { vector, hash, document: doc });
         this.clearRecallCache('addMessage');
     }
 
-    async removeMessage(messageIndex) {
+    async removeMessage(messageIndex, guard = {}) {
         const idx = this._normalizeMessageIndex(messageIndex);
         if (idx === null) return;
-        const existing = this.vectors.get(idx);
-        if (!existing) return;
 
-        this._updateTermCounts(existing.document, -1);
-        this.totalDocuments--;
-        this.vectors.delete(idx);
-        await this._deleteVector(idx);
-        this.clearRecallCache('removeMessage');
+        const chatId = guard.chatId ?? this.chatId;
+        if (!chatId) return;
+        const chatRevision = guard.chatRevision ?? this._chatRevision;
+        const revision = guard.revision ?? this._markMessageRevision(chatId, idx);
+        const isActiveChat = this.chatId === chatId && this._chatRevision === chatRevision;
+        let changed = false;
+
+        if (isActiveChat) {
+            const existing = this.vectors.get(idx);
+            if (existing) {
+                this._updateTermCounts(existing.document, -1);
+                this.totalDocuments = Math.max(0, this.totalDocuments - 1);
+                this.vectors.delete(idx);
+                changed = true;
+            }
+        }
+
+        const deleted = await this._deleteVector(
+            idx,
+            chatId,
+            () => this._isMessageRevisionCurrent(chatId, idx, revision),
+        );
+        if ((changed || deleted) && this.chatId === chatId) {
+            this.clearRecallCache('removeMessage');
+        }
     }
 
     /**
@@ -414,20 +530,36 @@ export class VectorManager {
     async batchIndex(chat, onProgress) {
         if (!this.isReady || !this.chatId) return { indexed: 0, skipped: 0 };
 
+        const chatId = this.chatId;
+        const chatRevision = this._chatRevision;
+        const chatRef = Array.isArray(chat) ? chat : [];
+        const embeddingRevision = this._embeddingRevision;
+        if (!this._isChatCurrent(chatId, chatRevision, chatRef)) {
+            return { indexed: 0, skipped: chatRef.length };
+        }
+
         const tasks = [];
-        for (let i = 0; i < chat.length; i++) {
-            const meta = chat[i].horae_meta;
-            if (!meta || chat[i].is_user) continue;
+        for (let i = 0; i < chatRef.length; i++) {
+            const meta = chatRef[i].horae_meta;
+            if (!meta || chatRef[i].is_user) continue;
             if (isMetaExcluded(meta)) continue;
             const doc = this.buildVectorDocument(meta);
             if (!doc) continue;
             const hash = this._hashString(doc);
+            const revision = this._markMessageRevision(chatId, i);
             const existing = this.vectors.get(i);
             if (existing && existing.hash === hash) continue;
-            tasks.push({ messageIndex: i, document: doc, hash });
+            tasks.push({
+                messageIndex: i,
+                messageRef: chatRef[i],
+                metaRef: meta,
+                document: doc,
+                hash,
+                revision,
+            });
         }
 
-        if (tasks.length === 0) return { indexed: 0, skipped: chat.length };
+        if (tasks.length === 0) return { indexed: 0, skipped: chatRef.length };
 
         const batchSize = this.isApiMode ? 64 : 16;
         let indexed = 0;
@@ -443,6 +575,23 @@ export class VectorManager {
                 const vector = result.vectors[j];
                 if (!vector) continue;
 
+                const snapshot = {
+                    ...task,
+                    chatId,
+                    chatRevision,
+                    chatRef,
+                    embeddingRevision,
+                };
+                if (!this._isMessageSnapshotCurrent(snapshot)) continue;
+
+                const saved = await this._saveVector(
+                    task.messageIndex,
+                    { vector, hash: task.hash, document: task.document },
+                    chatId,
+                    () => this._isMessageSnapshotCurrent(snapshot),
+                );
+                if (!saved || !this._isMessageSnapshotCurrent(snapshot)) continue;
+
                 const old = this.vectors.get(task.messageIndex);
                 if (old) {
                     this._updateTermCounts(old.document, -1);
@@ -456,7 +605,6 @@ export class VectorManager {
                     document: task.document,
                 });
                 this._updateTermCounts(task.document, 1);
-                await this._saveVector(task.messageIndex, { vector, hash: task.hash, document: task.document });
                 indexed++;
             }
 
@@ -465,15 +613,20 @@ export class VectorManager {
             }
         }
 
-        if (indexed > 0) this.clearRecallCache('batchIndex');
-        return { indexed, skipped: chat.length - tasks.length };
+        if (indexed > 0 && this._isChatCurrent(chatId, chatRevision, chatRef)) {
+            this.clearRecallCache('batchIndex');
+        }
+        return { indexed, skipped: chatRef.length - tasks.length };
     }
 
     async clearIndex() {
+        const chatId = this.chatId;
+        // 讓 clear 前已發出的 add/batch/load 在 await 返回後全部失效，避免清空後又被舊工作寫回。
+        this._chatRevision++;
         this.vectors.clear();
         this.termCounts.clear();
         this.totalDocuments = 0;
-        if (this.chatId) await this._clearVectors();
+        if (chatId) await this._clearVectors(chatId);
         this.clearRecallCache('clearIndex');
     }
 
@@ -2193,9 +2346,10 @@ export class VectorManager {
         const base = this._geminiEmbeddingBase();
         const modelName = String(this._apiModel || '').startsWith('models/') ? String(this._apiModel) : `models/${this._apiModel}`;
         const isGoogle = this._isGoogleGenerativeLanguageUrl(base);
-        const endpoint = `${base}/v1beta/${modelName}:batchEmbedContents${isGoogle ? `?key=${encodeURIComponent(this._apiKey)}` : ''}`;
+        const endpoint = `${base}/v1beta/${modelName}:batchEmbedContents`;
         const headers = { 'Content-Type': 'application/json' };
-        if (!isGoogle) headers.Authorization = `Bearer ${this._apiKey}`;
+        if (isGoogle) headers['x-goog-api-key'] = this._apiKey;
+        else headers.Authorization = `Bearer ${this._apiKey}`;
 
         return {
             endpoint,
@@ -2488,57 +2642,78 @@ export class VectorManager {
         });
     }
 
-    async _saveVector(messageIndex, data) {
+    async _saveVector(messageIndex, data, chatId = this.chatId, guard = null) {
+        const targetChatId = chatId;
         await this._openDB();
+        if (!targetChatId || (guard && !guard())) return false;
         const normalizedIdx = this._normalizeMessageIndex(messageIndex);
-        if (normalizedIdx === null) return;
-        const key = `${this.chatId}_${normalizedIdx}`;
+        if (normalizedIdx === null) return false;
+        const key = `${targetChatId}_${normalizedIdx}`;
         return new Promise((resolve, reject) => {
             const tx = this.db.transaction(STORE_NAME, 'readwrite');
             tx.objectStore(STORE_NAME).put({
                 key,
-                chatId: this.chatId,
+                chatId: targetChatId,
                 messageIndex: normalizedIdx,
                 vector: data.vector,
                 hash: data.hash,
                 document: data.document,
             });
-            tx.oncomplete = resolve;
+            tx.oncomplete = () => resolve(true);
             tx.onerror = () => reject(tx.error);
         });
     }
 
-    async _loadAllVectors() {
+    async _loadAllVectors(chatId = this.chatId) {
+        const targetChatId = chatId;
         await this._openDB();
+        if (!targetChatId) return [];
         return new Promise((resolve, reject) => {
             const tx = this.db.transaction(STORE_NAME, 'readonly');
             const index = tx.objectStore(STORE_NAME).index('chatId');
-            const req = index.getAll(this.chatId);
+            const req = index.getAll(targetChatId);
             req.onsuccess = () => resolve(req.result || []);
             req.onerror = () => reject(req.error);
         });
     }
 
-    async _deleteVector(messageIndex) {
+    async _deleteVector(messageIndex, chatId = this.chatId, guard = null, expectedHash = null) {
+        const targetChatId = chatId;
         await this._openDB();
+        if (!targetChatId || (guard && !guard())) return false;
         const normalizedIdx = this._normalizeMessageIndex(messageIndex);
-        if (normalizedIdx === null) return;
-        const key = `${this.chatId}_${normalizedIdx}`;
+        if (normalizedIdx === null) return false;
+        const key = `${targetChatId}_${normalizedIdx}`;
         return new Promise((resolve, reject) => {
             const tx = this.db.transaction(STORE_NAME, 'readwrite');
-            tx.objectStore(STORE_NAME).delete(key);
-            tx.oncomplete = resolve;
+            const store = tx.objectStore(STORE_NAME);
+            let deleted = false;
+            if (expectedHash === null || expectedHash === undefined) {
+                store.delete(key);
+                deleted = true;
+            } else {
+                const req = store.get(key);
+                req.onsuccess = () => {
+                    if (req.result?.hash === expectedHash) {
+                        store.delete(key);
+                        deleted = true;
+                    }
+                };
+            }
+            tx.oncomplete = () => resolve(deleted);
             tx.onerror = () => reject(tx.error);
         });
     }
 
-    async _clearVectors() {
+    async _clearVectors(chatId = this.chatId) {
+        const targetChatId = chatId;
         await this._openDB();
+        if (!targetChatId) return;
         return new Promise((resolve, reject) => {
             const tx = this.db.transaction(STORE_NAME, 'readwrite');
             const store = tx.objectStore(STORE_NAME);
             const index = store.index('chatId');
-            const req = index.openCursor(this.chatId);
+            const req = index.openCursor(targetChatId);
             req.onsuccess = () => {
                 const cursor = req.result;
                 if (cursor) {
@@ -2765,8 +2940,8 @@ export class VectorManager {
         return records.map(r => r.payload).filter(Boolean);
     }
 
-    async _loadSnapshotsForChat(chatId) {
-        if (!chatId) return;
+    async _loadSnapshotsForChat(chatId, apply = true) {
+        if (!chatId) return [];
         await this._openDB();
         const records = await new Promise((resolve, reject) => {
             const tx = this.db.transaction(SNAPSHOT_STORE, 'readonly');
@@ -2774,19 +2949,23 @@ export class VectorManager {
             req.onsuccess = () => resolve(req.result || []);
             req.onerror = () => reject(req.error);
         });
-        this.snapshots = records
+        let snapshots = records
             .map(r => this._buildSnapshotRuntime(r))
             .filter(Boolean);
         // 维度跟当前模型不一致的快照直接禁用（点积会失效），日志提示
         if (this.dimensions && this.isReady) {
-            const before = this.snapshots.length;
-            this.snapshots = this.snapshots.filter(s => {
+            const before = snapshots.length;
+            snapshots = snapshots.filter(s => {
                 if (s.dimensions === this.dimensions) return true;
                 console.warn(`[Horae Vector] 快照「${s.label || s.id}」维度 ${s.dimensions} 与当前模型 ${this.dimensions} 不一致，已跳过`);
                 return false;
             });
-            if (before !== this.snapshots.length) this.clearRecallCache('snapshot-dim-mismatch');
+            if (apply && before !== snapshots.length) this.clearRecallCache('snapshot-dim-mismatch');
         }
+        if (apply) {
+            this.snapshots = snapshots;
+        }
+        return snapshots;
     }
 
     _buildSnapshotRuntime(record) {
@@ -2851,6 +3030,47 @@ export class VectorManager {
         if (messageIndex == null) return null;
         const n = typeof messageIndex === 'number' ? messageIndex : parseInt(messageIndex, 10);
         return Number.isInteger(n) && n >= 0 ? n : null;
+    }
+
+    _messageRevisionKey(chatId, messageIndex) {
+        return `${String(chatId)}\u0000${messageIndex}`;
+    }
+
+    _markMessageRevision(chatId, messageIndex) {
+        const revision = ++this._messageRevisionCounter;
+        this._messageRevisions.set(this._messageRevisionKey(chatId, messageIndex), revision);
+        return revision;
+    }
+
+    _getMessageRevision(chatId, messageIndex) {
+        return this._messageRevisions.get(this._messageRevisionKey(chatId, messageIndex)) || 0;
+    }
+
+    _isMessageRevisionCurrent(chatId, messageIndex, revision) {
+        return this._getMessageRevision(chatId, messageIndex) === revision;
+    }
+
+    _isChatCurrent(chatId, chatRevision, chatRef = null) {
+        if (this.chatId !== chatId || this._chatRevision !== chatRevision) return false;
+        return !chatRef || !this._chatRef || this._chatRef === chatRef;
+    }
+
+    _isMessageSnapshotCurrent(snapshot) {
+        if (!snapshot || snapshot.embeddingRevision !== this._embeddingRevision) return false;
+        if (!this._isChatCurrent(snapshot.chatId, snapshot.chatRevision, snapshot.chatRef)) return false;
+        if (!this._isMessageRevisionCurrent(snapshot.chatId, snapshot.messageIndex, snapshot.revision)) return false;
+
+        let currentMeta = snapshot.metaRef;
+        if (snapshot.chatRef) {
+            const currentMessage = snapshot.chatRef[snapshot.messageIndex];
+            if (!currentMessage) return false;
+            if (snapshot.messageRef && currentMessage !== snapshot.messageRef) return false;
+            currentMeta = currentMessage.horae_meta;
+        }
+
+        const currentDocument = this.buildVectorDocument(currentMeta);
+        if (currentDocument !== snapshot.document) return false;
+        return !!currentDocument && this._hashString(currentDocument) === snapshot.hash;
     }
 
     /**

@@ -1,24 +1,24 @@
-# Horae 状态栏接入说明（角色卡作者向）
+# Horae 狀態欄接入說明（角色卡作者向）
 
-本说明面向**角色卡 / 预设 / 正则注入的 HTML 状态栏作者**，目标是把 Horae 收集的剧情状态显示在你自己的状态栏里，与 Horae 自身界面并存。
+本說明提供給**角色卡 / 預設 / 正則注入的 HTML 狀態欄作者**，目標是把 Horae 收集的劇情狀態顯示在你自己的狀態欄裡，與 Horae 自身介面並存。
 
-如果你写的是 SillyTavern 扩展、需要在 Horae 抽屉或聊天 UI 里挂载组件，请改看 `Horae端口系统说明.md`。
+如果你寫的是 SillyTavern 擴充功能、需要在 Horae 抽屜或聊天 UI 裡掛載元件，請改看 `Horae端口系統說明.md`。
 
 ---
 
 ## 工作模型
 
-正则注入的状态栏会以 iframe 形式渲染在消息内或界面上。Horae 的运行时 API 挂在 SillyTavern 主窗口的 `window.Horae` 上，因此 iframe 内需要通过 `window.parent.Horae` 访问。
+正則注入的狀態欄會以 iframe 形式渲染在訊息內或介面上。Horae 的執行階段 API 掛在 SillyTavern 主視窗的 `window.Horae` 上，因此 iframe 內需要透過 `window.parent.Horae` 存取。
 
 ```
-[ SillyTavern 主窗口 ]
+[ SillyTavern 主視窗 ]
    ├── window.Horae           ← Horae 暴露的 API
-   ├── window.SillyTavern     ← ST 官方 API（含事件总线）
-   └── <iframe>               ← 你的状态栏
+   ├── window.SillyTavern     ← ST 官方 API（含事件總線）
+   └── <iframe>               ← 你的狀態欄
         └── window.parent.Horae / SillyTavern
 ```
 
-Horae 与 MVU 无任何耦合，可以独立使用，也可以与 MVU 共存：状态栏中两个数据源可以同时读取，各自渲染各自负责的部分。
+Horae 與 MVU 無任何耦合，可以獨立使用，也可以與 MVU 共存：狀態欄中兩個資料源可以同時讀取，各自渲染各自負責的部分。
 
 ---
 
@@ -26,33 +26,33 @@ Horae 与 MVU 无任何耦合，可以独立使用，也可以与 MVU 共存：�
 
 ### `window.parent.Horae` 主要方法
 
-| 方法 | 返回 | 说明 |
+| 方法 | 回傳 | 說明 |
 | ---- | ---- | ---- |
-| `getLatestState(skipLast?)` | `Object` | 截至当前楼层的聚合状态（时间、地点、角色、物品、关系等）。`skipLast` 可跳过末尾若干楼层。 |
-| `getRpgState(skipLast?)`    | `Object` | RPG 模板下的属性、技能、装备、声望、货币、据点等数据。 |
-| `getEvents(limit?, level?)` | `Array`  | 最近事件列表，可按重要等级过滤。 |
-| `getChat()`                 | `Array`  | 当前聊天消息数组（与 ST `getContext().chat` 同源）。 |
-| `getSettings()`             | `Object` | Horae 的当前设置浅拷贝，可用于读取主题状态等。 |
-| `isEnabled()`               | `Boolean`| Horae 是否启用。 |
-| `version`                   | `String` | Horae 插件版本。 |
-| `portApiVersion`            | `Number` | 端口协议版本。 |
+| `getLatestState(skipLast?)` | `Object` | 截至目前樓層的聚合狀態（時間、地點、角色、物品、關係等）。`skipLast` 可跳過末尾若干樓層。 |
+| `getRpgState(skipLast?)`    | `Object` | RPG 模板下的屬性、技能、裝備、聲望、貨幣、據點等資料。 |
+| `getEvents(limit?, level?)` | `Array`  | 最近事件列表，可按重要等級過濾。 |
+| `getChat()`                 | `Array`  | 目前聊天訊息陣列（與 ST `getContext().chat` 同源）。 |
+| `getSettings()`             | `Object` | Horae 的目前設定深層快照；金鑰及 URL 中常見的憑證參數會遮罩，可用於讀取主題狀態等。 |
+| `isEnabled()`               | `Boolean`| Horae 是否啟用。 |
+| `version`                   | `String` | Horae 擴充功能版本。 |
+| `portApiVersion`            | `Number` | 端口協議版本。 |
 
-所有方法均为同步返回，**不会修改 Horae 内部状态**，可放心在渲染循环里反复调用。
+所有方法均為同步回傳，**不會修改 Horae 內部狀態**，可放心在渲染循環裡反覆呼叫。
 
 ### `window.parent.SillyTavern.getContext()`
 
-由 SillyTavern 提供，可拿到 `eventSource` / `event_types`，用于事件订阅。
+由 SillyTavern 提供，可拿到 `eventSource` / `event_types`，用於事件訂閱。
 
 ---
 
-## `getLatestState()` 返回结构
+## `getLatestState()` 回傳結構
 
 ```typescript
 {
     timestamp: {
         story_date: string,   // 例如 "1024年 春之月12日"
         story_time: string,   // 例如 "14:30"
-        absolute:   string,   // 绝对时间字符串（可选）
+        absolute:   string,   // 絕對時間字串（可選）
     },
     scene: {
         location:           string,
@@ -80,9 +80,9 @@ Horae 与 MVU 无任何耦合，可以独立使用，也可以与 MVU 共存：�
 }
 ```
 
-字段在剧情未触及时为空对象 / 空数组，渲染前请做空值兜底。
+欄位在劇情未觸及時為空物件 / 空陣列，渲染前請做空值兜底。
 
-## `getRpgState()` 返回结构
+## `getRpgState()` 回傳結構
 
 ```typescript
 {
@@ -99,9 +99,9 @@ Horae 与 MVU 无任何耦合，可以独立使用，也可以与 MVU 共存：�
 }
 ```
 
-仅当 Horae 的 RPG 模板启用时才会有数据，否则各字段为空对象/空数组。
+僅當 Horae 的 RPG 模板啟用時才會有資料，否則各欄位為空物件/空陣列。
 
-## `getEvents()` 元素结构
+## `getEvents()` 元素結構
 
 ```typescript
 {
@@ -114,18 +114,18 @@ Horae 与 MVU 无任何耦合，可以独立使用，也可以与 MVU 共存：�
     event: {
         summary: string,
         level:   'minor' | 'normal' | 'major' | string,
-        // ... 其他自定义字段
+        // ... 其他自訂欄位
     }
 }
 ```
 
 ---
 
-## 触发重新渲染
+## 觸發重新渲染
 
-iframe 没法直接订阅 Horae 内部刷新，但可以用以下三种方式之一感知数据变化：
+iframe 沒法直接訂閱 Horae 內部重新整理，但可以用以下三種方式之一感知資料變化：
 
-### 方式一：订阅 SillyTavern 事件（推荐）
+### 方式一：訂閱 SillyTavern 事件（推薦）
 
 ```javascript
 const ctx = window.parent.SillyTavern?.getContext?.();
@@ -139,21 +139,21 @@ if (ctx?.eventSource && ctx.event_types) {
 }
 ```
 
-涵盖 90% 的状态变化时机，是首选方案。
+涵蓋 90% 的狀態變化時機，是首選方案。
 
-### 方式二：监听 Horae 自身派发的 CustomEvent
+### 方式二：監聽 Horae 自身送出的 CustomEvent
 
-Horae 在端口变化时会向主窗口派发：
+Horae 在端口變化時會向主視窗送出：
 
 ```javascript
 window.parent.addEventListener('horae:portsChanged', render);
 ```
 
-注意这是端口注册/卸载时触发，不会覆盖普通的剧情状态变化。仅在你需要响应 Horae 自身的 UI 配置变化时使用。
+注意這是端口註冊/卸載時觸發，不會覆蓋普通的劇情狀態變化。僅在你需要回應 Horae 自身的 UI 設定變化時使用。
 
-### 方式三：轮询 + 状态比对（兜底）
+### 方式三：輪詢 + 狀態比對（兜底）
 
-某些早期版本或特殊环境下事件订阅可能不可用，此时退化为定时拉取并比较关键字段：
+某些早期版本或特殊環境下事件訂閱可能不可用，此時退化為定時擷取並比較關鍵欄位：
 
 ```javascript
 let _last = '';
@@ -167,18 +167,18 @@ setInterval(() => {
 
 ---
 
-## 安全与稳定性
+## 安全與穩定性
 
-1. **永远做存在性检查**。`window.parent.Horae` 可能因为加载顺序、用户未启用 Horae、或预览窗口等原因为 `undefined`。
-2. **所有取自 Horae 的字符串都要 HTML 转义**。地点、角色名、物品描述等均来自 LLM 输出，直接拼到 `innerHTML` 会引入 XSS。
-3. **不要修改返回对象**。`getLatestState()` 等返回的是 Horae 内部对象的引用，写入会污染下次刷新的结果。
-4. **频率控制**。`render` 内部如果 DOM 操作较重，建议自己加 `requestAnimationFrame` 或简单防抖，避免一次消息事件触发多次重排。
+1. **永遠做存在性檢查**。`window.parent.Horae` 可能因為加載順序、使用者未啟用 Horae、或預覽視窗等原因為 `undefined`。
+2. **所有取自 Horae 的字串都要 HTML 轉義**。地點、角色名、物品描述等均來自 LLM 輸出，直接拼到 `innerHTML` 會引入 XSS。
+3. **不要修改回傳物件**。`getLatestState()` 等回傳的是 Horae 內部物件的引用，寫入會污染下次重新整理的結果。
+4. **頻率控制**。`render` 內部如果 DOM 操作較重，建議自己加 `requestAnimationFrame` 或簡單防抖，避免一次訊息事件觸發多次重排。
 
 ---
 
 ## 完整示例
 
-可直接作为正则注入内容使用的最小骨架：
+可直接作為正則注入內容使用的最小骨架：
 
 ```html
 <!doctype html>
@@ -202,8 +202,8 @@ setInterval(() => {
     <span>📍 <span id="hb-loc">--</span></span>
     <span id="hb-time">--:--</span>
   </div>
-  <div id="hb-people" class="hb-empty">无在场角色</div>
-  <div id="hb-items"  class="hb-empty">无物品</div>
+  <div id="hb-people" class="hb-empty">無在場角色</div>
+  <div id="hb-items"  class="hb-empty">無物品</div>
 </div>
 
 <script>
@@ -226,7 +226,7 @@ setInterval(() => {
     if (!s){ box.classList.add('hb-off'); return; }
     box.classList.remove('hb-off');
 
-    document.getElementById('hb-loc').textContent  = s.scene && s.scene.location || '未知地点';
+    document.getElementById('hb-loc').textContent  = s.scene && s.scene.location || '未知地點';
     document.getElementById('hb-time').textContent = s.timestamp && s.timestamp.story_time || '--:--';
 
     var ppl = (s.scene && s.scene.characters_present) || [];
@@ -235,7 +235,7 @@ setInterval(() => {
       pe.className = '';
       pe.innerHTML = ppl.map(function(n){ return '<span class="hb-tag">'+esc(n)+'</span>'; }).join('');
     } else {
-      pe.className = 'hb-empty'; pe.textContent = '无在场角色';
+      pe.className = 'hb-empty'; pe.textContent = '無在場角色';
     }
 
     var items = s.items || {};
@@ -249,7 +249,7 @@ setInterval(() => {
         return '<div class="hb-row"><span>'+esc(k)+'</span><span style="color:#888">'+esc(tail)+'</span></div>';
       }).join('');
     } else {
-      ie.className = 'hb-empty'; ie.textContent = '无物品';
+      ie.className = 'hb-empty'; ie.textContent = '無物品';
     }
   }
 
@@ -284,9 +284,9 @@ setInterval(() => {
 
 ---
 
-## 与 MVU 共存的写法
+## 與 MVU 共存的寫法
 
-Horae 与 MVU 数据互不冲突，可以在同一份状态栏里同时读：
+Horae 與 MVU 資料互不衝突，可以在同一份狀態欄裡同時讀：
 
 ```javascript
 function readBoth(){
@@ -300,14 +300,14 @@ function readBoth(){
 }
 ```
 
-建议遵循单一来源原则：同一字段只交给一个系统维护，状态栏只做组合显示。例如位置、角色在场、剧情物品、声望、金钱、好感交给 Horae，自定义数值交给 MVU，两边各自独立、互不写入。
+建議遵循單一來源原則：同一欄位只交給一個系統維護，狀態欄只做組合顯示。例如位置、角色在場、劇情物品、聲望、金錢、好感交給 Horae，自訂數值交給 MVU，兩邊各自獨立、互不寫入。
 
 ---
 
-## 调试
+## 調試
 
 ```javascript
 console.log('[Horae]', window.parent.Horae?.version, window.parent.Horae?.getLatestState?.());
 ```
 
-控制台直接调用 `window.Horae.getLatestState()` 即可立即拿到当前最新数据，便于在卡片里打断点核对字段。
+主控台直接呼叫 `window.Horae.getLatestState()` 即可立即拿到目前最新資料，便於在卡片裡打斷點核對欄位。

@@ -1,4 +1,4 @@
-# Horae - 时光记忆 v1.15.1 | SillyTavern 记忆增强插件
+# Horae - 时光记忆 v1.15.1-minijin.1 | SillyTavern 记忆增强插件（Minijin Fork）
 
 [English](README.md) | **简体中文** | [繁體中文](README.zh-TW.md)
 
@@ -9,6 +9,26 @@
 长篇 RP 玩家的老毛病你一定遇到过 —— AI 的记忆约等于金鱼：昨天的事说成今天早上，连几天前发生的事都永远说是昨天；上一幕穿校服下一幕突然便服；NPC关系倒置；送出去的礼物凭空消失，丢掉的东西又回到手里。
 
 **Horae 用结构化的时间锚点，给你的 AI 装上一本靠谱的记忆账本。**
+
+---
+
+## Minijin Fork：回复后辅助 API 结算
+
+本 fork 基于上游提交 [`7a88598`](https://github.com/SenriYuki/SillyTavern-Horae/commit/7a8859897bbfc6f0781ac5eb2451bc607e2bab95)，新增可选的回复后结算模式：
+
+- 功能**默认关闭**；关闭时完整保留上游原有行为。
+- 直接复用现有「辅助 API」的地址、密钥、模型与串行队列，无需再配置一套凭据。
+- 开启后，主模型提示词仍保留 Horae 记忆数据和召回内容，但不再携带标签/输出规则。
+- 正文先正常显示，再由辅助 API 异步提取原版 Horae 标签格式，并写回对应消息和对应 swipe。
+- 辅助 API 失败时**绝不回退主 API**；已生成的正文不受影响，并会显示错误提示。
+- 下一次主请求发出前，只对相符的待处理结算最多等待 **2 秒**，到时即继续，不会无限卡住。
+- 结算会锁定聊天、楼层、swipe、正文与记忆版本；切换聊天、快速滑页或手动修改数据时，旧结果不会覆盖新版本。
+- 开关只接受本机用户在辅助 API 配置完整时明确启用，不会被共享配置、角色卡或外部设置静默打开。
+- 消息面板的手动「AI 分析」仍可作为重试入口。
+
+Fork 目标版本：**SillyTavern 1.18.0**。实机验证日期：**待最終驗證補登**。此处只是验证占位，不代表最终测试已经通过。
+
+Fork 仓库：[Minijinai75/SillyTavern-Horae-1](https://github.com/Minijinai75/SillyTavern-Horae-1)。维护细节见 [FORK_NOTES.md](FORK_NOTES.md)。
 
 ---
 
@@ -45,7 +65,7 @@ AI 描写同一个地点，上一回有壁炉这一回没了？场景记忆会�
 ## 快速安装
 
 1. 打开 SillyTavern → 顶部扩展面板（积木图标）→ 「安装扩展」
-2. 粘贴本仓库的 Git 链接，点击安装
+2. 粘贴 `https://github.com/Minijinai75/SillyTavern-Horae-1.git`，点击安装
 3. 安装完成后刷新页面即可使用
 
 > 配套正则会在插件首次加载时**自动注入**，无需手动导入。
@@ -70,7 +90,8 @@ AI 描写同一个地点，上一回有壁炉这一回没了？场景记忆会�
 
 ## 兼容性
 
-- **SillyTavern**: 1.13.0+（AI分析功能需求1.13.5+）
+- **上游兼容基线**：SillyTavern 1.13.0+（AI 分析功能要求 1.13.5+）
+- **Fork 验证目标**：SillyTavern 1.18.0；实机验证日期：**待最終驗證補登**
 - **平台**: 电脑端 + 移动端双端适配
 
 ---
@@ -95,7 +116,7 @@ window.Horae?.getEvents(10)      // → 最近 10 条事件
 window.Horae?.getSettings()
 
 // 版本号
-window.Horae?.version            // → "1.14.0"
+window.Horae?.version            // → "1.15.1-minijin.1"
 ```
 
 设置变更事件通过酒馆的 `eventSource` 广播：
@@ -131,7 +152,8 @@ Horae 目前支持以下语言的界面显示：
 
 > ⚠️ 本项目为业余开发，回复可能有延迟，敬请谅解。
 
-**作者：SenriYuki**
+**原作者：SenriYuki**
+**Fork 维护者：Minijinai75**
 
 ### 翻译致谢
 
@@ -140,4 +162,3 @@ Horae 目前支持以下语言的界面显示：
 ### 致谢
 
 - [@baibai-git](https://github.com/baibai-git) — PR #5 整合贡献
-

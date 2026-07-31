@@ -19,6 +19,13 @@ Scene memory records a location's core layout and permanent traits (architectura
 [When to write]
   ✦ First arrival at a new location → must write scene_desc describing its fixed physical traits
   ✦ Permanent physical changes at a location (e.g., destroyed, renovated) → write updated scene_desc
+[Multiple locations in one reply]
+  · If one reply visits two or more newly described or permanently changed locations, output repeated adjacent location/scene_desc pairs in story order. Every location line must be immediately followed by its own scene_desc line.
+    location:Nameless Tavern·Hall
+    scene_desc:Located on the 1st floor. A high-ceiling wooden hall with a fixed central bar
+    location:Nameless Tavern·Room 203
+    scene_desc:Located on the east side of the 2nd floor. A corner room with an east-facing window
+  · The final location line must name the current scene where the reply ends.
 [When not to write]
   ✗ Return to a previously recorded location with no physical change → do not write
   ✗ Seasonal/weather/atmosphere changes → do not write (these are temporary and not fixed traits)
